@@ -14,8 +14,18 @@ WitnessWoods triages newly notified felling sites for human ecological review. I
 
 **What it does not do.** It does not measure biodiversity, does not judge whether felling is legal or right, and never says a site is safe to fell. Absence of records is not absence of species: a site nobody has recorded is marked UNDER_SURVEYED, not LOW. A species record shows that the species was recorded there, not that it occupies the site today. A Red List category describes extinction risk, not legal protection.
 
-![This week's Dalarna notifications on a Sentinel-2 basemap](docs/screens/landing.jpg)
-![A HIGH dossier: red-listed species near the site, the six-week window, cited evidence](docs/screens/dossier_high.jpg)
+## This week, all of Sweden
+
+974 regeneration-felling notifications were received in Sweden from 28 Sep to 3 Oct 2026, across 21 counties. Every one has an evidence profile and a priority from the deterministic rubric. 168 have a full agent dossier: the whole Dalarna week, the top 5 sites by rubric ranking in every county, some Gävleborg sites from the held-out run, and one live run. The rest are clearly labelled rule-only profiles, and any of them can be sent to the agent with one click.
+
+- **Rubric:** tuned on Dalarna and tested on Gävleborg and Värmland. Elsewhere it is applied untested, and the UI says so for each county.
+- **Effort reference:** each county is judged against its own sites. Counties with fewer than 10 notifications this week fall back to the national median.
+- **Unrecorded sites:** 509 of the 974 sites (52%) have no species record within 250 m since 2016.
+
+![This week's notifications across Sweden on a Sentinel-2 basemap](docs/screens/landing.jpg)
+![An agent dossier: red-listed species near the site with reference photos, the six-week window, cited evidence](docs/screens/dossier_high.jpg)
+
+Species photos are *reference photos of the species, not from the site*. They come from iNaturalist (licensed photos only), with Wikidata/Wikimedia Commons as the fallback. Each is shown with its author, licence and source, and stored in `web/data/img/` so the demo runs offline.
 
 ## Results
 
@@ -88,6 +98,10 @@ cp .env.example .env                                         # add keys; FW_ROUT
 .venv/bin/python scripts/build_web_data.py                   # rebuild web/data from the dossiers
 .venv/bin/python -m fw.validate --lannr 17 --replication --stage score   # how the replication was scored
 .venv/bin/python scripts/ab_condense.py                      # one more Condense A/B pair
+.venv/bin/python scripts/national.py all                     # evidence profiles for every notification in Sweden this week
+.venv/bin/python scripts/national_agents.py --per-county 5   # agent on the top 5 per county
+.venv/bin/python scripts/species_photos.py                   # reference photos for cited species
+.venv/bin/python scripts/build_web_data.py --national        # rebuild web/data for all of Sweden
 ```
 
 `scripts/ui_check.py` takes acceptance screenshots with Playwright, using the installed Chrome (`pip install playwright`).
@@ -104,6 +118,7 @@ cp .env.example .env                                         # add keys; FW_ROUT
 - **Skogsstyrelsen** (Swedish Forest Agency): felling notifications, completed fellings and key habitats. CC0.
 - **Artportalen via GBIF**: dataset `38b4c89f-584c-41bb-bd8f-cd1def33e92f`. CC0.
 - **SLU Artdatabanken, Swedish Red List 2025** ([doi:10.5878/2x1z-jm10](https://doi.org/10.5878/2x1z-jm10)). CC0.
+- **iNaturalist** and **Wikimedia Commons**: species reference photos, each under its own licence as shown in the UI.
 - **[Sentinel-2 cloudless](https://s2maps.eu) by EOX IT Services GmbH** (contains modified Copernicus Sentinel data 2023): map basemap only. CC BY-NC-SA 4.0, non-commercial use.
 - **OpenStreetMap contributors**: fallback basemap and county outline. ODbL.
 

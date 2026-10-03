@@ -1,11 +1,11 @@
 {
  "week": {
-  "county": "Dalarna",
+  "county": "Sweden",
   "received_from": "2026-09-28",
   "received_to": "2026-10-03",
-  "n": 67,
-  "no_record_within_250m": 43,
-  "share_no_record_within_250m": 0.6418
+  "n": 974,
+  "no_record_within_250m": 509,
+  "share_no_record_within_250m": 0.5226
  },
  "zero_record_share": [
   {
@@ -35,5 +35,5 @@
    "share_no_record_inside": 0.9296
   }
  ],
- "headline": "43 of the 67 sites notified in Dalarna this week (64%) have no species record within 250 m since 2016."
+ "headline": "509 of the 974 sites notified for regeneration felling in Sweden this week (52%) have no species record within 250 m since 2016."
 }
