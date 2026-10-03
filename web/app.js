@@ -29,7 +29,7 @@ async function boot() {
   const [week, stats] = await Promise.all([getJSON("data/week.json"), getJSON("data/stats.json")]);
   S.week = week; S.stats = stats;
   S.sites = week.sites; S.sites.forEach((s) => (S.byId[s.beteckn] = s));
-  renderCounters(); renderHeadline();
+  renderCounters(); renderHeadline(); renderIntro();
   initMap();
   Promise.all([getJSON("data/replay.json"), getJSON("data/evidence_test.json"), getJSON("data/condense.json")])
     .then(([replay, ev, condense]) => { S.replay = replay; S.ev = ev; S.condense = condense; renderEvidence(); renderCondense(); applyHash(); })
@@ -48,10 +48,24 @@ function renderCounters() {
   ].join(" ");
 }
 
+function renderIntro() {
+  const highs = S.sites.filter((s) => s.priority === "HIGH");
+  $("feed-intro").innerHTML = `
+    <div class="intro-h">How it works</div>
+    <ol class="steps">
+      <li>Reads each new felling notification and checks whether the site is already felled.</li>
+      <li>Cross-examines species records (Artportalen via GBIF), the Swedish Red List 2025 and how much anyone has recorded nearby.</li>
+      <li>Writes a dossier that cites its evidence and sets a priority for human review, or says the site is under-surveyed.</li>
+    </ol>
+    <div class="intro-h">This week's HIGH sites (${highs.length})</div>
+    <ul class="high-list">${highs.map((s) => `<li><button class="high-item" data-b="${esc(s.beteckn)}"><span class="mono">${esc(s.beteckn)}</span> · ${esc(titleCase(s.kommun))}<span class="hl">${esc(s.headline)}</span></button></li>`).join("")}</ul>`;
+  document.querySelectorAll(".high-item").forEach((el) => (el.onclick = () => { showTab("map"); selectSite(el.dataset.b); }));
+}
+
 function renderHeadline() {
   const st = S.stats;
   if (!st || !st.headline) return;
-  const sub = st.zero_record_share.map((z) => `${z.county} ${pct(z.share_no_record_within_250m)}`).join(" · ");
+  const sub = "Same measure over six weeks: " + st.zero_record_share.map((z) => `${z.county} ${pct(z.share_no_record_within_250m)}`).join(" · ");
   const wins = [...new Set(st.zero_record_share.map((z) => z.window.join()))];
   const win = st.zero_record_share[0].window;
   const when = wins.length === 1 ? `received ${fmtDate(win[0], false)}–${fmtDate(addDays(win[1], -1))}` : "in each county's six-week window";
@@ -183,6 +197,8 @@ function addLayers(map) {
   map.addLayer({ id: "species-halo", type: "circle", source: "halos",
                  paint: { "circle-color": pcol, "circle-opacity": 0.035, "circle-stroke-color": pcol, "circle-stroke-opacity": 0.3, "circle-stroke-width": 0.8,
                           "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 0, ["/", ["get", "h22"], 4194304], 22, ["get", "h22"]] } });
+  map.addLayer({ id: "species-felled", type: "circle", source: "species", filter: ["has", "felled_after"],
+                 paint: { "circle-radius": 10, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#b08a6e", "circle-stroke-width": 2.5 } });
   map.addLayer({ id: "species-site", type: "circle", source: "species", filter: ["!=", ["get", "mobility"], "mobile"],
                  paint: { "circle-color": pcol, "circle-radius": 4.5, "circle-stroke-color": "#0D1411", "circle-stroke-width": 1.2 } });
   map.addLayer({ id: "species-mobile", type: "symbol", source: "species", filter: ["==", ["get", "mobility"], "mobile"],
@@ -243,7 +259,9 @@ async function selectSite(b, { fly = true } = {}) {
   const feats = d.geometry.species.features.map((f) => {
     const lat = f.geometry.coordinates[1];
     const mpp22 = (78271.517 * Math.cos((lat * Math.PI) / 180)) / 4194304;
-    return { ...f, properties: { ...f.properties, h22: Math.max(f.properties.unc_m, 1) / mpp22 } };
+    const props = { ...f.properties, h22: Math.max(f.properties.unc_m, 1) / mpp22 };
+    if (props.felled_after == null) delete props.felled_after;
+    return { ...f, properties: props };
   });
   map.getSource("species").setData({ type: "FeatureCollection", features: feats });
   // one halo per distinct (position, uncertainty): many coarse records share a single point
@@ -297,27 +315,49 @@ function chips(ids, ev) {
   }).join("")}</span>`;
 }
 
-const TOOL_SHORT = { get_notification: "notification", check_completed_felling: "fellings", query_species: "species",
+const EN_TYPE = { "Föryngringsavverkning": "regeneration felling" };
+const EN_STATUS = { "Anmält för avverkning": "notified for felling" };
+const TOOL_SHORT = { landscape_context: "context", get_notification: "notification", check_completed_felling: "fellings", query_species: "species",
                      observation_effort: "effort", redlist_lookup: "red list", get_evidence: "evidence", record_finding: "verdict" };
 
 function renderDossier(d) {
   const n = d.notification, ev = d.evidence, p = d.priority;
   const list = (items) => items.map((r) => `<li>${esc(r.claim)} ${chips(r.evidence_ids, ev)}</li>`).join("");
+  // Why: species first; reasons that only restate notification facts go last (those facts are in the header)
+  const META = new Set(["notification", "completed_felling"]);
+  const order = d.reasons.map((r, i) => ({ r, kinds: d.reason_kinds[i] || [] }))
+    .map((x) => ({ ...x, rank: x.kinds.includes("redlisted_species") ? 0 : x.kinds.every((k) => META.has(k)) ? 2 : 1 }))
+    .sort((a, b) => a.rank - b.rank);
+  const SHOW_REASONS = 1;
+  const reasons = order.map((x, i) => `<li class="${x.rank === 2 ? "meta" : ""}${i >= SHOW_REASONS ? " more" : ""}">${esc(x.r.claim)} ${chips(x.r.evidence_ids, ev)}</li>`).join("");
+  const nMoreReasons = Math.max(0, order.length - SHOW_REASONS);
+  const spAll = d.species_lines || [];
+  const nElig = spAll.filter((s) => s.eligible).length;
+  const spShow = nElig >= 3 ? nElig : nElig + 2;
+  const nMoreSp = Math.max(0, spAll.length - spShow);
+  const spLines = spAll.map((s, i) => ({ s, more: i >= spShow })).map(({ s, more }) => `<li class="sp-line${s.eligible ? " elig" : ""}${more ? " more" : ""}"><span class="cat c-${s.category}">${s.category}</span> ${esc(s.swedish ? s.swedish + ", " : "")}${esc(s.group)} (<i>${esc(s.scientific)}</i>), ${s.dist_m} m${s.mobility === "mobile" ? ' <span class="tag dim">mobile</span>' : ""} ${chips([s.evidence_id], ev)}</li>`).join("");
+  const c = d.context;
+  const ctx = c ? `<div class="d-sec context"><h3>Context <span class="muted small">computed, not used for priority</span></h3>
+      <div>Within 1 km: <b>${c.felled_ha.since_2015} ha</b> felled since 2015 · ${c.felled_ha.before_2015} ha before 2015 (zone ${c.zone_ha} ha)</div>
+      ${c.later_fellings.length ? `<ul>${c.later_fellings.map((x) => `<li>${esc(x.swedish || x.species)} (${x.category}): ${x.n === 1 ? "the record" : x.n + " records"} from ${x.record_years.join(", ")} ${x.n === 1 ? "lies" : "lie"} in an area felled in ${fmtDate(x.felled)}; the habitat may be gone. <a class="chip" href="${esc(x.url)}" target="_blank" rel="noopener">GBIF</a></li>`).join("")}</ul>` : ""}
+      <div class="hint-line">${esc(c.computed)}.</div></div>` : "";
   const path = d.path.map((s) => `<span class="step${s.error ? " err" : ""}">${esc(TOOL_SHORT[s.tool] || s.tool)}${s.args.buffer_m !== undefined ? " " + s.args.buffer_m + "m" : ""}${s.error ? " ✕" : ""}</span>`).join('<span class="arrow">›</span>');
   const urgent = p === "HIGH" || p === "MEDIUM";
   $("dossier-body").innerHTML = `
     <span class="badge p-${p}">${LABEL[p]}</span>${d.forced ? ' <span class="chip">harness-recorded</span>' : ""}
     <div class="d-id mono">${esc(d.beteckn)}</div>
-    <div class="d-meta">${esc(titleCase(n.kommun))} · ${esc(n.polygon_ha)} ha · received ${fmtDate(n.inkomdatum)}</div>
+    <div class="d-meta">${esc(titleCase(n.kommun))} · <b>${esc(n.polygon_ha)} ha</b> ${esc(EN_TYPE[n.avverktyp] || n.avverktyp)} · ${esc(n.skogstyp)} · <span title="${esc(n.status)}">${esc(EN_STATUS[n.status] || n.status)}</span> · received ${fmtDate(n.inkomdatum)}</div>
     <div class="window">
       <div class="label">${urgent ? "Field check before" : "Window closes"}</div>
       <div class="date">${fmtDate(d.window_closes)}</div>
       <div class="note">Normal six-week waiting period: received ${fmtDate(n.inkomdatum, false)} + 42 days.</div>
     </div>
     ${d.override_reason ? `<div class="override">Agent disagreed with the rule (${LABEL[d.rubric_hint.priority]}): ${esc(d.override_reason.text)} ${chips(d.override_reason.evidence_ids, ev)}</div>` : ""}
-    <div class="d-sec why"><h3>Why</h3><ul>${list(d.reasons)}</ul>
+    <div class="d-sec why"><h3>Why</h3>${spLines ? `<ul class="sp-lines collapsed">${spLines}</ul>${nMoreSp ? `<button class="more-btn" data-t="sp">+${nMoreSp} more red-listed species</button>` : ""}` : ""}
+      <ul class="reasons collapsed">${reasons}</ul>${nMoreReasons ? `<button class="more-btn" data-t="reasons">All ${order.length} reasons</button>` : ""}
       <div class="hint-line">Rule: ${LABEL[d.rubric_hint.priority]}, ${esc(d.rubric_hint.rule)} ${chips(d.rubric_hint.evidence_ids, ev)}</div></div>
     ${d.contradictions.length ? `<div class="d-sec"><h3>Contradictions</h3><ul>${list(d.contradictions)}</ul></div>` : ""}
+    ${ctx}
     <div class="d-sec not-proven"><h3>What this does not prove</h3><ul>${d.not_established.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>
     <div class="d-sec"><h3>Next action</h3><div>${esc(d.next_action)}</div></div>
     <div class="d-sec"><h3>Agent path</h3><div class="path">${path || '<span class="muted">not recorded</span>'}</div></div>
@@ -325,6 +365,10 @@ function renderDossier(d) {
     <button class="live" id="live-btn">Investigate live <kbd>L</kbd></button>
     <div class="hint-line mono">${esc(d.model || "")} · ${esc(d.route || "")} · ${esc((d.recorded_at || "").replace("T", " "))}</div>`;
   $("live-btn").onclick = () => investigateLive(d.beteckn);
+  document.querySelectorAll(".more-btn").forEach((b) => (b.onclick = () => {
+    const ul = b.dataset.t === "sp" ? document.querySelector(".sp-lines") : document.querySelector(".reasons");
+    ul.classList.remove("collapsed"); b.remove();
+  }));
   $("dossier").scrollTop = 0;
 }
 const titleCase = (s) => String(s || "").toLowerCase().replace(/(^|[\s-])\p{L}/gu, (m) => m.toUpperCase());
@@ -356,6 +400,7 @@ function interval() { return Math.max(120, Math.min(400, 90000 / Math.max(1, S.r
 
 function resetReplay() {
   clearTimeout(S.timer);
+  $("feed-intro").hidden = true;
   closeDossier();
   $("feed-list").innerHTML = "";
   S.sites.forEach((s) => setFade(s.beteckn, 0));
@@ -473,9 +518,14 @@ function histogram(card, ev) {
 }
 function renderEvidence() {
   const ev = S.ev; if (!ev) return;
-  const lifts = ev.cards.map((c) => `${c.primary.lift.toFixed(1)}× (${c.county}${c.pre_registered ? ", pre-registered" : ", exploratory cut-off"})`).join(" and ");
-  $("ev-header").textContent = `Blind, scored once: our evidence ranking surfaced sites near known key habitats ${lifts} more often than area-matched random picks.`;
+  const lifts = [...ev.cards].sort((a, b) => (b.pre_registered ? 1 : 0) - (a.pre_registered ? 1 : 0))
+    .map((c) => `${c.primary.lift.toFixed(1)}× ${c.pre_registered ? "in a pre-registered replication" : "at an exploratory cut-off"} (${c.county})`).join(" and ");
+  $("ev-header").textContent = `Blind, scored once: our evidence ranking surfaced sites near known key habitats ${lifts}, compared with area-matched random picks.`;
   $("ev-sub").textContent = `Positive = ${ev.label}. The key-habitat layer is hidden from the agent and the rule; each county was scored once. Ranking = the deterministic rubric over every regeneration-felling notification in the window.`;
+  const big = [...ev.cards].sort((a, b) => (b.pre_registered ? 1 : 0) - (a.pre_registered ? 1 : 0));
+  $("ev-big").innerHTML = big.map((c) => `<div class="big"><div class="num">${c.primary.lift.toFixed(1)}×</div>
+      <div class="lab"><b>${esc(c.county)}</b> · ${c.pre_registered ? "pre-registered replication" : "exploratory cut-off"}<br>
+      <span class="muted">top ${c.primary.k} of ${c.n_total}: ${c.primary.hits} near a key habitat vs ${(c.primary.baseline_mean * c.primary.k).toFixed(1)} expected · p = ${c.primary.p_value.toFixed(3)}</span></div></div>`).join("");
   $("ev-cards").innerHTML = ev.cards.map((c) => `
     <div class="card">
       <h2>${esc(c.county)}${c.pre_registered ? ' <span class="chip">pre-registered replication</span>' : ""}</h2>
@@ -507,16 +557,29 @@ function renderCondense() {
       <div class="pending">A/B measurement pending: the same 10 notifications, direct vs through Condense.</div>`;
     return;
   }
-  const d = c.routes.direct, k = c.routes.condense;
+  const d = c.routes.direct, k = c.routes.condense, sv = c.savings, ag = c.agreement;
   const bar = (label, a, b, fmt) => {
     const m = Math.max(a, b);
     return `<div class="bar-row"><span>${label}, direct</span><div class="bar" style="width:${(100 * a) / m}%"></div><span class="mono">${fmt(a)}</span></div>
             <div class="bar-row"><span>${label}, via Condense</span><div class="bar condense" style="width:${(100 * b) / m}%"></div><span class="mono">${fmt(b)}</span></div>`;
   };
-  el.innerHTML = `<h1>Condense</h1><p class="ev-sub">We compress the investigation, never the evidence.</p>
-    <div class="bars">${bar("Input tokens", d.input_total, k.input_total, (x) => x.toLocaleString("en"))}
-    ${bar("Cost", d.usd, k.usd, (x) => "$" + x.toFixed(3))}</div>
-    <p>${esc(c.agreement && c.agreement.summary || "")}</p>`;
+  const signed = (x, less, more) => `${Math.abs(x).toFixed(0)}% ${x >= 0 ? less : more}`;
+  const n = (x) => x.toLocaleString("en");
+  el.innerHTML = `<h1>Condense</h1><p class="ev-sub">We compress the investigation, never the evidence. ${c.pairs} paired runs of the same ${c.sites.length} Dalarna notifications, direct vs through Condense, ${esc(c.model)}.</p>
+    <div class="ev-big">
+      <div class="big"><div class="num">${ag.same_priority}/${ag.of}</div><div class="lab"><b>same priorities</b><br><span class="muted">site runs, direct vs Condense</span></div></div>
+      <div class="big"><div class="num">${signed(sv.input_per_call_pct, "", "").trim()}</div><div class="lab"><b>${sv.input_per_call_pct >= 0 ? "fewer" : "more"} input tokens per call</b><br><span class="muted">${n(d.input_per_call)} → ${n(k.input_per_call)}</span></div></div>
+      <div class="big"><div class="num">${ag.cited_ids_found_in_evidence_store}</div><div class="lab"><b>cited evidence IDs retained</b><br><span class="muted">lossless evidence store</span></div></div>
+    </div>
+    <div class="bars">${bar("Input tokens, total", d.input_total, k.input_total, n)}
+    ${bar("Model calls", d.calls, k.calls, n)}
+    ${bar("Cost, total", d.usd, k.usd, (x) => "$" + x.toFixed(3))}</div>
+    <p class="cond-sum">${esc(ag.summary)}</p>
+    <ul class="footnotes">
+      <li>Per call, Condense sent ${signed(sv.input_per_call_pct, "fewer", "more")} input tokens and cost ${signed(sv.usd_per_call_pct, "less", "more")}. In total the agent made ${k.calls} calls through Condense against ${d.calls} direct, so the total cost was ${signed(sv.usd_pct, "lower", "higher")}.</li>
+      <li>Uncached input: ${n(d.input_uncached)} direct vs ${n(k.input_uncached)} via Condense; cache reads ${n(d.cache_read)} vs ${n(k.cache_read)}. Compression changes the prompt prefix, so some cache hits are lost.</li>
+      <li>${esc(c.note)}</li>
+    </ul>`;
 }
 
 /* ------------------------------------------------------------------ tabs, keys, hash */

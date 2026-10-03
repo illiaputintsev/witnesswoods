@@ -86,7 +86,7 @@ class Run:
         self.status = status or self.status
         self.progress = progress if progress is not None else self.progress
         self.current = current if current is not None else self.current
-        tmp = STATE.with_suffix(".json.tmp")
+        tmp = STATE.with_suffix(f".{os.getpid()}.tmp")  # per process: parallel runs must not share a temp file
         tmp.write_text(json.dumps({"run_id": self.run_id, "route": self.route, "model": self.model,
                                    "status": self.status, "progress": self.progress, "current": self.current,
                                    "sessions": self.sessions, "totals": self.totals,

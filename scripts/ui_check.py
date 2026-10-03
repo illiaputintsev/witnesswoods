@@ -35,7 +35,8 @@ def main() -> None:
         browser = p.chromium.launch(channel="chrome", headless=True, args=["--use-angle=metal", "--enable-gpu"])
         for w, h in ((1440, 900), (1280, 720)):
             for name, frag, settle in (("landing", "", 1.5), ("replay", "#replay=150", 2.0),
-                                       (f"dossier_high", f"#site={high}", 4.0), ("evidence", "#tab=evidence", 1.0)):
+                                       (f"dossier_high", f"#site={high}", 4.0), ("evidence", "#tab=evidence", 1.0),
+                                       ("condense", "#tab=condense", 1.0)):
                 ctx = browser.new_context(viewport={"width": w, "height": h}, device_scale_factor=1)
                 page = ctx.new_page()
                 errs = []

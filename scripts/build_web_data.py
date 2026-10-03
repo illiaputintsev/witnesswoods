@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from fw import config, evidence, gbif, geo, rank, skogs, tools  # noqa: E402
+from fw import config, context, evidence, gbif, geo, rank, skogs, tools  # noqa: E402
 from fw.cache import get_json  # noqa: E402
 from fw.profile import RINGS  # noqa: E402
 
@@ -21,6 +21,15 @@ WEB = config.ROOT / "web" / "data"
 WINDOW_DAYS = 42
 COUNTY_NAMES = {"20": "Dalarna", "21": "Gävleborg", "17": "Värmland"}
 EN_TYPE = {"Föryngringsavverkning": "regeneration felling"}
+EN_STATUS = {"Anmält för avverkning": "notified for felling"}
+# Red List organism groups (Organismgrupp1) in plain English
+EN_GROUP = {"Lavar": "lichen", "Storsvampar": "fungus", "Mossor": "moss", "Kärlväxter": "vascular plant",
+            "Skalbaggar": "beetle", "Fåglar": "bird", "Däggdjur": "mammal", "Fjärilar": "butterfly or moth",
+            "Tvåvingar": "fly", "Steklar": "bee, wasp or ant", "Blötdjur": "mollusc", "Spindeldjur": "arachnid",
+            "Halvvingar": "true bug", "Sländor": "dragonfly or relative", "Grod- och kräldjur": "amphibian or reptile",
+            "Alger": "alga", "Fiskar": "fish", "Kräftdjur": "crustacean", "Mångfotingar": "millipede or centipede",
+            "Hopprätvingar": "grasshopper or cricket", "Övriga organismer": "other organism"}
+CAT_ORDER = {"CR": 0, "EN": 1, "VU": 2, "NT": 3}
 
 
 def _round_coords(geom: dict, nd: int = 6) -> dict:
@@ -138,6 +147,11 @@ def feed_text(e: dict, prof: dict, dossier: dict | None) -> str:
         return (f"Observation effort: {plural(eff['records'], 'record')} within 1000 m (county median "
                 f"{eff['county_median']:g}); {ns['within_250m']['records']} within 250 m (median "
                 f"{ns['county_median_within_250m']:g}).")
+    if t == "landscape_context":
+        c = context.compute(n["beteckn"])
+        fh = c["felled_ha"]
+        return (f"Landscape context: {fh['since_2015']:g} ha felled within 1 km since 2015; "
+                f"{len(c['records_in_later_fellings'])} red-listed records inside later fellings.")
     if t == "redlist_lookup":
         return f"Looked up {a.get('scientific_name', 'a species')} in the Swedish Red List."
     if t == "get_evidence":
@@ -176,6 +190,14 @@ def site_payload(b: str, d: dict, prof: dict, events: list[dict]) -> dict:
                                        "evidence_id": sp.get("evidence_id")}})
     cited = {i for r in d["reasons"] + d["contradictions"] for i in r["evidence_ids"]}
     cited |= set(d["rubric_hint"]["evidence_ids"]) | set((d.get("override_reason") or {}).get("evidence_ids", []))
+    ctx = context.compute(b)  # computed for the snapshot; this run's agent did not see it
+    later = {}
+    for x in ctx["records_in_later_fellings"]:
+        later.setdefault(x["key"], x["felled"])
+    for f in pts:
+        f["properties"]["felled_after"] = later.get(f["properties"]["key"])
+    ev_index = evidence_index(cited)
+    kinds = {i: e["kind"] for i, e in ev_index.items()}
     path = [{"tool": e["tool"], "args": {k: v for k, v in e.get("args", {}).items() if k == "buffer_m"},
              "error": e.get("error", False), "ts": e["ts"]} for e in events]
     # display-only tidying of recorded text: "66.0" -> "66", stray trailing quote; the dossier files stay as recorded
@@ -186,10 +208,53 @@ def site_payload(b: str, d: dict, prof: dict, events: list[dict]) -> dict:
         "reasons": d["reasons"], "contradictions": d["contradictions"], "uncertainties": d["uncertainties"],
         "not_established": d["not_established"], "next_action": d["next_action"].strip().rstrip('"'), "counts": d["counts"],
         "run_id": d.get("run_id"), "model": d.get("model"), "route": d.get("route"), "recorded_at": d.get("recorded_at"),
-        "evidence": evidence_index(cited), "path": path,
+        "evidence": ev_index, "path": path,
+        "reason_kinds": [sorted({kinds.get(i, "?") for i in r["evidence_ids"]}) for r in d["reasons"]],
+        "species_lines": species_lines(cited, prof), "context": context_block(ctx),
         "geometry": {"site": _gj(site), "rings": rings, "species": {"type": "FeatureCollection", "features": pts},
                      "fellings": {"type": "FeatureCollection", "features": felling_features(site)}},
     }
+
+
+def species_lines(cited: set, prof: dict) -> list[dict]:
+    """Cited red-listed species as 'garnlav, lichen (Alectoria sarmentosa), VU, 184 m', names from the Red List."""
+    out = []
+    for e in evidence.get(sorted(cited)):
+        if e["kind"] != "redlisted_species":
+            continue
+        p = e["payload"]
+        if p["category"] not in CAT_ORDER:
+            continue
+        near = p["nearest_record_by_ring"][str(p["smallest_ring_m"])]
+        sw = p["swedish_name"] if p["swedish_name"] not in ("no data", "", None) else None
+        grp = EN_GROUP.get(p["group"], p["group"].lower())
+        eligible = tools.rubric._eligible(p)
+        out.append({"text": f"{sw + ', ' if sw else ''}{grp} ({p['scientific_name']}), {p['category']}, {near['dist_m']} m",
+                    "swedish": sw, "group": grp, "scientific": p["scientific_name"], "category": p["category"],
+                    "dist_m": near["dist_m"], "unc_m": near["unc_m"], "year": near["year"], "eligible": eligible,
+                    "mobility": p["mobility"], "evidence_id": e["id"], "url": (p.get("record_urls") or [None])[0]})
+    out.sort(key=lambda x: (not x["eligible"], CAT_ORDER[x["category"]], x["dist_m"]))
+    return out
+
+
+def context_block(c: dict) -> dict:
+    """Group 'records inside later fellings' by species for display."""
+    groups = {}
+    for x in c["records_in_later_fellings"]:
+        g = groups.setdefault((x["species"], x["felled"]), {**x, "n": 0, "years": set()})
+        g["n"] += 1
+        g["years"].add(x["record_date"][:4])
+    items = [{k: v for k, v in g.items() if k not in ("years",)} | {"record_years": sorted(g["years"])}
+             for g in groups.values()]
+    items.sort(key=lambda x: (CAT_ORDER.get(x["category"], 9), x["dist_m"]))
+    return {"radius_m": c["radius_m"], "felled_ha": c["felled_ha"], "zone_ha": c["zone_ha"],
+            "later_fellings": items, "computed": "for this snapshot; the agent run shown here did not see it",
+            "note": c["note"]}
+
+
+def week_share(sites: list[dict]) -> dict:
+    none250 = sum(tools._profile(s["beteckn"])["rings"][250]["records"] == 0 for s in sites)
+    return {"n": len(sites), "no_record_within_250m": none250, "share_no_record_within_250m": round(none250 / len(sites), 4)}
 
 
 def zero_share(lannr: str) -> dict | None:
@@ -324,10 +389,12 @@ def main() -> None:
     (WEB / "replay.json").write_text(json.dumps({"steps": replay, "sites": len(sites)}, ensure_ascii=False))
     (WEB / "evidence_test.json").write_text(json.dumps(evidence_test(), ensure_ascii=False, indent=1))
     shares = [s for s in (zero_share(l) for l in ("21", "17")) if s]
+    ws = {"county": COUNTY_NAMES[a.lannr], "received_from": week["received_from"], "received_to": week["received_to"],
+          **week_share(sites)}
     (WEB / "stats.json").write_text(json.dumps({
-        "zero_record_share": shares,
-        "headline": ("More than half of newly notified sites have no species record within 250 m since 2016."
-                     if shares and all(s["share_no_record_within_250m"] > 0.5 for s in shares) else None)},
+        "week": ws, "zero_record_share": shares,
+        "headline": (f"{ws['no_record_within_250m']} of the {ws['n']} sites notified in {ws['county']} this week "
+                     f"({round(100 * ws['share_no_record_within_250m'])}%) have no species record within 250 m since 2016.")},
         ensure_ascii=False, indent=1))
     cond = config.OUT / "condense.json"
     (WEB / "condense.json").write_text(cond.read_text() if cond.exists() else json.dumps({"status": "pending"}))

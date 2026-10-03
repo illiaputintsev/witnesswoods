@@ -4,15 +4,17 @@ Every fact a tool returns is stored losslessly in the evidence store and cited b
 The key-habitat layer is deliberately absent: it lives only in fw/validate.py.
 """
 import json
+import os
 import re
 import time
+from pathlib import Path
 from functools import lru_cache
 
 from fw import config, evidence, gbif, profile, redlist, rubric
 
 PRIORITIES = ("HIGH", "MEDIUM", "LOW", "UNDER_SURVEYED", "ALREADY_FELLED")
 BUFFERS = (0, 100, 250, 500, 1000)
-DOSSIERS = config.OUT / "dossiers"
+DOSSIERS = Path(os.getenv("FW_DOSSIERS", str(config.OUT / "dossiers")))  # the A/B test writes to its own folders
 
 # Affirmative phrases that break the honesty rules (BRIEF section 2). record_finding rejects them in
 # reasons, contradictions, next_action and override text. Uncertainties and not_established are not
@@ -124,6 +126,13 @@ def redlist_lookup(scientific_name: str) -> dict:
                 "notes": "Not on the Swedish Red List 2025 (or the name did not match)."}
     eid = evidence.add("redlist", "redlist_entry", entry, "SLU Artdatabanken, Swedish Red List 2025 (researchdata.se 2026-63)")
     return {"found": True, **entry, "evidence_id": eid}
+
+
+def landscape_context(beteckn: str) -> dict:
+    """Context only (never part of the rubric): fellings within 1 km by year, and records inside later fellings."""
+    from fw import context
+    c, eid = context.context_evidence(beteckn)
+    return {**c, "records_in_later_fellings": c["records_in_later_fellings"][:15], "evidence_id": eid}
 
 
 def get_evidence(evidence_ids: list[str]) -> dict:
@@ -312,6 +321,12 @@ SCHEMAS = [
                     "habitats, negative impact factors, dead-wood dependence. Returns an evidence_id.",
      "input_schema": {"type": "object", "properties": {"scientific_name": {"type": "string"}},
                       "required": ["scientific_name"]}},
+    {"name": "landscape_context",
+     "description": "Context only, never part of the priority rubric: hectares of completed felling (satellite change "
+                    "detection) within 1 km of the polygon since 2015 and before 2015, and red-listed records that lie "
+                    "inside an area felled after the record was made (the habitat where they were recorded may be gone). "
+                    "Use it to note contradictions, not to change the priority. Returns an evidence_id.",
+     "input_schema": {"type": "object", "properties": {"beteckn": _B}, "required": ["beteckn"]}},
     {"name": "get_evidence",
      "description": "Retrieve stored evidence payloads by ID (lossless). Use when you need exact facts again.",
      "input_schema": {"type": "object", "properties": {"evidence_ids": {"type": "array", "items": {"type": "string"},
@@ -341,4 +356,5 @@ SCHEMAS = [
 
 FUNCS = {"get_notification": get_notification, "check_completed_felling": check_completed_felling,
          "query_species": query_species, "observation_effort": observation_effort,
-         "redlist_lookup": redlist_lookup, "get_evidence": get_evidence, "record_finding": record_finding}
+         "redlist_lookup": redlist_lookup, "landscape_context": landscape_context, "get_evidence": get_evidence,
+         "record_finding": record_finding}

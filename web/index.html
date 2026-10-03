@@ -40,6 +40,7 @@
       <span>Investigation feed <span class="feed-scope" id="feed-scope"></span></span>
       <span class="feed-status mono" id="feed-status">ready</span>
     </div>
+    <div class="feed-intro" id="feed-intro"></div>
     <ol class="feed-list" id="feed-list"></ol>
     <div class="feed-hint" id="feed-hint">Press <kbd>Space</kbd> or <b>Investigate this week</b> to replay how Forest Witness investigated each site.</div>
   </aside>
@@ -58,6 +59,7 @@
       <div class="legend-row sp"><span class="pt pt-mobile"></span>Mobile species record</div>
       <div class="legend-row sp"><span class="pt pt-elig"></span>Eligible threatened &nbsp;<span class="pt pt-other"></span>Other red-listed</div>
       <div class="legend-row sp"><span class="sw sw-felling"></span>Completed felling (satellite)</div>
+      <div class="legend-row sp"><span class="pt pt-felledrec"></span>Record inside a later felling</div>
       <div class="legend-note sp">Halo = coordinate uncertainty</div>
     </div>
     <div class="tile-note mono" id="tile-note" hidden>Map tiles unavailable: showing fallback</div>
@@ -71,6 +73,7 @@
 
 <section class="tabview" id="view-evidence" hidden>
   <div class="ev-inner">
+    <div class="ev-big" id="ev-big"></div>
     <h1 id="ev-header"><span class="skeleton w600"></span></h1>
     <p class="ev-sub" id="ev-sub"></p>
     <div class="cards" id="ev-cards"></div>
