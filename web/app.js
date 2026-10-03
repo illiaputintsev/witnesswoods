@@ -175,7 +175,7 @@ function renderCounties() {
   $("counties").innerHTML = `<div class="panel-head"><span>Counties this week</span><button class="collapse" id="cty-collapse" title="Hide">›</button></div>
     <div class="cty-note">${esc(w.rubric_note)} Priorities: deterministic rubric for all sites; the agent reviewed ${S.sites.filter((s) => s.kind !== "rule").length} of ${S.sites.length} shown.</div>
     <table class="cty"><thead><tr><th>County</th><th>notified</th><th class="h">HIGH</th><th class="m">MED</th><th class="u">under-surv.</th><th>agent</th></tr></thead>
-    <tbody>${countyRows().map((x) => `<tr data-l="${esc(x.lannr)}"><td>${esc(x.county)}${x.rubric_status !== "untested" ? ` <span class="st">${esc(x.rubric_status)}</span>` : ""}</td><td>${x.notified}</td><td class="h">${c(x, "HIGH")}</td><td class="m">${c(x, "MEDIUM")}</td><td class="u">${c(x, "UNDER_SURVEYED")}</td><td>${x.agent}</td></tr>`).join("")}</tbody></table>`;
+    <tbody>${countyRows().map((x) => `<tr data-l="${esc(x.lannr)}"><td>${esc(x.county)}</td><td>${x.notified}</td><td class="h">${c(x, "HIGH")}</td><td class="m">${c(x, "MEDIUM")}</td><td class="u">${c(x, "UNDER_SURVEYED")}</td><td>${x.agent}</td></tr>`).join("")}</tbody></table>`;
   $("cty-collapse").onclick = () => toggleCounties(false);
   document.querySelectorAll(".cty tbody tr").forEach((tr) => (tr.onclick = () => {
     const pts = S.sites.filter((s) => s.lannr === tr.dataset.l).map((s) => s.centroid);
@@ -792,35 +792,41 @@ function histogram(card, ev) {
 }
 function renderEvidence() {
   const ev = S.ev; if (!ev) return;
-  const lifts = [...ev.cards].sort((a, b) => (b.pre_registered ? 1 : 0) - (a.pre_registered ? 1 : 0))
-    .map((c) => `${c.primary.lift.toFixed(1)}× ${c.pre_registered ? "in a pre-registered replication" : "at an exploratory cut-off"} (${c.county})`).join(" and ");
-  $("ev-header").textContent = `Blind, scored once: our evidence ranking surfaced sites near known key habitats ${lifts}, compared with area-matched random picks.`;
-  $("ev-sub").textContent = `Positive = ${ev.label}. The key-habitat layer is hidden from the agent and the rule; each county was scored once. Ranking = the deterministic rubric over every regeneration-felling notification in the window.`;
-  const big = [...ev.cards].sort((a, b) => (b.pre_registered ? 1 : 0) - (a.pre_registered ? 1 : 0));
-  $("ev-big").innerHTML = big.map((c) => `<div class="big"><div class="num">${c.primary.lift.toFixed(1)}×</div>
-      <div class="lab"><b>${esc(c.county)}</b> · ${c.pre_registered ? "pre-registered replication" : "exploratory cut-off"}<br>
-      <span class="muted">top ${c.primary.k} of ${c.n_total}: ${c.primary.hits} near a key habitat vs ${(c.primary.baseline_mean * c.primary.k).toFixed(1)} expected · p = ${c.primary.p_value.toFixed(3)}</span></div></div>`).join("");
-  $("ev-cards").innerHTML = ev.cards.map((c) => `
-    <div class="card">
-      <h2>${esc(c.county)}${c.pre_registered ? ' <span class="chip">pre-registered replication</span>' : ""}</h2>
-      <div class="meta">Received ${fmtDate(c.window[0], false)}–${fmtDate(addDays(c.window[1], -1))} · ${c.excluded} excluded (only key habitats inventoried ${ev.leakage.positive_requires_datinv_before.slice(0, 4)} or later, or undated, nearby) · scored with <span class="mono">${esc(c.scored_with_commit)}</span></div>
-      ${histogram(c, ev)}
-      <div class="stats">
-        <div>N<b>${c.n_eval}</b></div><div>positives<b>${c.positives}</b></div><div>k (10% of ${c.n_total})<b>${c.primary.k}</b></div><div>precision<b>${c.primary.precision_at_k.toFixed(2)}</b></div>
-        <div>baseline mean<b>${c.primary.baseline_mean.toFixed(3)}</b></div><div>baseline p95<b>${c.primary.baseline_p95.toFixed(3)}</b></div><div>p<b>${c.primary.p_value.toFixed(3)}</b></div><div class="lift">lift<b>${c.primary.lift.toFixed(1)}×</b></div>
+  const cards = [...ev.cards].sort((a, b) => (b.pre_registered ? 1 : 0) - (a.pre_registered ? 1 : 0));
+  const a = ev.agent_sample, pre = ev.leakage.positive_requires_datinv_before.slice(0, 4);
+  const card = (c) => {
+    const pr = c.primary, rnd = pr.baseline_mean * pr.k, max = Math.max(pr.hits, rnd, 1);
+    const times = Math.max(1, Math.round((pr.p_share || pr.p_value) * 100));
+    return `<div class="t-card">
+      <div class="t-head"><h2>${esc(c.county)}</h2><span class="t-tag ${c.pre_registered ? "plan" : "first"}">${c.pre_registered ? "planned in advance" : "first look"}</span></div>
+      <div class="t-meta">${c.n_total} new felling notifications, ${fmtDate(c.window[0], false)}–${fmtDate(addDays(c.window[1], -1))}</div>
+      <div class="t-bars">
+        <div class="t-row"><span class="t-lab">Our top ${pr.k} sites</span><div class="t-bar ours" style="width:${(100 * pr.hits) / max}%"></div><b>${pr.hits}</b></div>
+        <div class="t-row"><span class="t-lab">Random sites, same sizes</span><div class="t-bar rnd" style="width:${(100 * rnd) / max}%"></div><b>${rnd.toFixed(1)}</b></div>
       </div>
-      ${c.note ? `<div class="secondary">${esc(c.note)}</div>` : ""}
-      <div class="secondary">${c.secondary.map((s) => `Also k = ${s.k}: ${s.hits} hit${s.hits === 1 ? "" : "s"}, precision ${s.precision_at_k.toFixed(2)}, baseline ${s.baseline_mean.toFixed(3)}, p ${s.p_value.toFixed(2)}, lift ${s.lift === null ? "undefined" : s.lift.toFixed(1) + "×"}.`).join(" ")}</div>
-    </div>`).join("");
-  const a = ev.agent_sample;
-  $("ev-notes").innerHTML = [
-    a.agent.hits === a.rubric_hint.hits
-      ? `Agent-only sample in ${esc(a.county)} (${a.n_sampled} sites sampled, ${a.n_eval} scored, ${a.positives} positives): no measurable difference from the rule. Agent and rule both had ${a.agent.hits} of ${a.agent.k} in their top ${a.agent.k} (random baseline ${(a.agent.baseline_mean * a.agent.k).toFixed(1)}, p = ${a.agent.p_value.toFixed(2)}).`
-      : `Agent-only sample in ${esc(a.county)} (${a.n_sampled} sites sampled, ${a.n_eval} scored, ${a.positives} positives): agent ${a.agent.hits} of ${a.agent.k} (p = ${a.agent.p_value.toFixed(2)}), rule ${a.rubric_hint.hits} of ${a.rubric_hint.k} (p = ${a.rubric_hint.p_value.toFixed(2)}).`,
-    `Key habitats are an evaluation proxy, hidden from the agent. At the ${a.positives} positive sample sites in ${esc(a.county)}, ${a.positives_swamp_forest} of the nearest key habitats were swamp forests, which the species evidence did not pick up.`,
-    `Species records are used from ${ev.leakage.species_records_since_year} on and positives need a key habitat inventoried before ${ev.leakage.positive_requires_datinv_before.slice(0, 4)}: strong temporal separation, not perfect independence.`,
-    `Pre-registration commits: protocol <span class="mono">${esc(ev.protocol_commit)}</span> (${esc(ev.cards[0].county)}), replication <span class="mono">${esc(ev.cards[1] ? ev.cards[1].scored_with_commit : "")}</span> (${esc(ev.cards[1] ? ev.cards[1].county : "")}).`,
-  ].map((x) => `<li>${x}</li>`).join("");
+      <div class="t-unit">sites within 250 m of a known valuable forest</div>
+      <div class="t-result"><span class="t-x">${pr.lift.toFixed(1)}×</span> more often than chance.
+        Random picks did as well only <b>${times} time${times === 1 ? "" : "s"} in 100</b>.</div>
+      ${c.pre_registered ? "" : `<div class="t-note">The cut-off (top 10%) was one of two chosen before scoring but not named as the main one, so treat this county as a first look.</div>`}
+    </div>`;
+  };
+  $("ev-body").innerHTML = `
+    <h1>Does it point to the right places?</h1>
+    <p class="t-lead">Skogsstyrelsen has already mapped forests it knows are valuable (key habitats, <i>nyckelbiotoper</i>). We hid that map, let WitnessWoods rank every new felling notification using only open species data, and then checked the hidden map.</p>
+    <ol class="t-steps">
+      <li><b>Hide the answer.</b> The map of known valuable forests is never shown to the ranking or the agent.</li>
+      <li><b>Rank blind.</b> Every new notification in a county gets a priority from species records, the Red List and recording effort.</li>
+      <li><b>Check once.</b> How many of our top 10% lie near a known valuable forest, compared with random sites of the same sizes?</li>
+    </ol>
+    <div class="t-cards">${cards.map(card).join("")}</div>
+    <div class="t-limits"><h3>What this does and does not show</h3><ul>
+      <li>It tests the <b>ranking rule</b> on two counties it was never tuned on. The AI agent's own test was small (${a.n_sampled} sites, ${a.positives} near a valuable forest) and showed no difference from the rule.</li>
+      <li>Known valuable forests are a stand-in for value, not the full truth. In the agent's test, ${a.positives_swamp_forest} of the ${a.positives} valuable forests nearby were swamp forests, which the species records did not pick up.</li>
+      <li>Each county was checked once, with the code fixed in advance. Nothing was tuned afterwards.</li>
+    </ul></div>
+    <details class="t-method"><summary>Method details</summary>
+      <p>Positive = a key habitat inventoried before ${pre} within 250 m of the notified polygon; species records from ${ev.leakage.species_records_since_year} on, so the two are separated in time. Baseline = ${ev.draws.toLocaleString("en")} random draws of the same number of sites with the same mix of site areas. "Times in 100" = share of random draws that reached our number of hits. Code fixed before scoring: <span class="mono">${esc(ev.protocol_commit)}</span> (Gävleborg) and <span class="mono">${esc((cards.find((c) => c.pre_registered) || {}).scored_with_commit || "")}</span> (Värmland).</p>
+    </details>`;
 }
 
 /* ------------------------------------------------------------------ condense tab */
