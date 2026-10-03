@@ -12,7 +12,7 @@ import threading
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -74,6 +74,81 @@ def live(beteckn: str):
         _live.update(status="running", beteckn=beteckn, lines=[], priority=None, error=None)
     threading.Thread(target=_run_live, args=(beteckn,), daemon=True).start()
     return {"started": beteckn}
+
+
+@app.post("/api/chat")
+def chat(body: dict = Body(...)):
+    """Follow-up questions about one site; the agent sees the full dossier and evidence context."""
+    from fw import chat as fwchat
+    b = str(body.get("beteckn", "")).replace("_", " ")
+    msgs = body.get("messages") or []
+    if not b or not msgs:
+        raise HTTPException(400, "beteckn and messages are required")
+    try:
+        return fwchat.ask(b, msgs)
+    except RuntimeError as e:
+        raise HTTPException(503, str(e))
+
+
+@app.get("/api/geocode")
+def geocode(q: str):
+    """Places in Sweden by name (forests, parks, villages...) via OpenStreetMap Nominatim, cached to disk."""
+    from fw.cache import get_json
+    q = q.strip()[:120]
+    if len(q) < 2:
+        return []
+    try:
+        res = get_json("https://nominatim.openstreetmap.org/search",
+                       {"q": q, "countrycodes": "se", "format": "jsonv2", "limit": 6})
+    except Exception:
+        raise HTTPException(502, "place search unavailable")
+    return [{"name": r.get("display_name", "")[:120], "type": r.get("type"), "lat": float(r["lat"]), "lon": float(r["lon"]),
+             "bbox": [float(r["boundingbox"][2]), float(r["boundingbox"][0]), float(r["boundingbox"][3]), float(r["boundingbox"][1])]}
+            for r in res]
+
+
+_scan = {"status": "idle", "lines": [], "added": 0, "error": None, "scope": None}
+
+
+def _run_scan(lannr: str | None, start: str, end: str) -> None:
+    from datetime import date, timedelta
+    from fw import skogs as sk
+    from scripts import build_web_data as bwd
+    try:
+        end_x = (date.fromisoformat(end) + timedelta(days=1)).isoformat()
+        where = (f"Avverktyp='{sk.REGEN}' AND Inkomdatum >= DATE '{start}' AND Inkomdatum < DATE '{end_x}'"
+                 + (f" AND Lannr='{lannr}'" if lannr else ""))
+        feats = sk.query_features(config.NOTIFICATIONS_URL, where, "Beteckn,Lannr", "OBJECTID ASC")
+        items = [{"beteckn": f["properties"]["Beteckn"], "lannr": f["properties"]["Lannr"]} for f in feats if f.get("geometry")]
+        _scan["lines"].append(f"{len(items)} regeneration notifications found; building evidence profiles (no LLM)…")
+        def progress(i, b, p):
+            if i % 5 == 0 or i == 1:
+                _scan["lines"].append(f"{i}: {b} → {p.replace('_', '-').lower()} (rule)")
+        new = bwd.add_rule_sites(items, progress)
+        _scan.update(status="done", added=len(new))
+        _scan["lines"].append(f"Done: {len(new)} new sites added; {len(items) - len(new)} were already in the data.")
+    except Exception as e:
+        _scan.update(status="error", error=f"{type(e).__name__}: {e}"[:300])
+
+
+@app.post("/api/scan")
+def scan(body: dict = Body(...)):
+    """Fetch and profile notifications for one county (or all of Sweden) and a date range; merges into the data."""
+    lannr = body.get("lannr") or None
+    start, end = str(body.get("from", "")), str(body.get("to", ""))
+    if not (len(start) == 10 and len(end) == 10):
+        raise HTTPException(400, "from and to must be YYYY-MM-DD")
+    with _lock:
+        if _scan["status"] == "running":
+            raise HTTPException(409, "a scan is already running")
+        _scan.update(status="running", lines=[], added=0, error=None, scope={"lannr": lannr, "from": start, "to": end})
+    threading.Thread(target=_run_scan, args=(lannr, start, end), daemon=True).start()
+    return {"started": _scan["scope"]}
+
+
+@app.get("/api/scan/status")
+def scan_status():
+    return _scan
 
 
 @app.get("/api/live/status")

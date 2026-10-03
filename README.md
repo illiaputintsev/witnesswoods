@@ -25,6 +25,12 @@ WitnessWoods triages newly notified felling sites for human ecological review. I
 ![This week's notifications across Sweden on a Sentinel-2 basemap](docs/screens/landing.jpg)
 ![An agent dossier: red-listed species near the site with reference photos, the six-week window, cited evidence](docs/screens/dossier_high.jpg)
 
+**Using it.**
+- **Search:** find a site, municipality, county or place (forest, park, village; via OpenStreetMap). Filter by region and by received date.
+- **Overview:** the logo, the "All sites" button or <kbd>Esc</kbd> zooms back out to everything.
+- **Scan:** loads a region and date range that is not in the data yet. It fetches and profiles notifications with no LLM and merges them into the current data. Otherwise the app uses the latest collected data and shows when it was built.
+- **Ask about this site:** the chat in each dossier answers follow-up questions with the full dossier and evidence as context. It can draft a field-visit plan, look up a species on the web (with sources) and chart this site's own records. Charts are built from exact precomputed counts.
+
 Species photos are *reference photos of the species, not from the site*. They come from iNaturalist (licensed photos only), with Wikidata/Wikimedia Commons as the fallback. Each is shown with its author, licence and source, and stored in `web/data/img/` so the demo runs offline.
 
 ## Results

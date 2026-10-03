@@ -28,25 +28,27 @@ async function boot() {
   bindUI();
   const [week, stats] = await Promise.all([getJSON("data/week.json"), getJSON("data/stats.json")]);
   S.week = week; S.stats = stats;
-  S.sites = week.sites; S.sites.forEach((s) => (S.byId[s.beteckn] = s));
-  renderCounters(); renderHeadline(); renderIntro(); renderCounties();
+  S.all = week.sites; S.sites = week.sites; S.all.forEach((s) => (S.byId[s.beteckn] = s));
+  S.filter = { lannr: "", from: week.received_from, to: week.received_to };
+  renderTools(); renderCounters(); renderHeadline(); renderIntro(); renderCounties();
   initMap();
   Promise.all([getJSON("data/replay.json"), getJSON("data/evidence_test.json"), getJSON("data/condense.json")])
-    .then(([replay, ev, condense]) => { S.replay = replay; if (S.week.scope === "Sweden") S.replay.steps = interleave(replay.steps); S.ev = ev; S.condense = condense; renderEvidence(); renderCondense(); applyHash(); })
+    .then(([replay, ev, condense]) => { S.replay = replay; if (S.week.scope === "Sweden") S.replay.steps = interleave(replay.steps); S.allSteps = S.replay.steps; S.ev = ev; S.condense = condense; renderEvidence(); renderCondense(); applyHash(); })
     .catch((e) => console.warn("secondary data:", e.message));
 }
 
 function renderCounters() {
-  const w = S.week, c = w.counts;
+  const w = S.week, c = countBy(S.sites);
+  const nAgent = S.sites.filter((s) => s.kind !== "rule").length;
   const part = (cls, n, label) => `<span class="${cls}"><b>${n ?? 0}</b> ${label}</span>`;
   const extra = w.investigated < w.notified ? `<span class="dot">·</span>${part("", w.investigated, "investigated")}` : "";
   $("feed-scope").textContent = `${w.county} · ${fmtDate(w.received_from, false)}–${fmtDate(w.received_to, false)}`;
   const national = w.scope === "Sweden";
   $("counters").innerHTML = [
-    part("", w.notified, national ? "notified" : "notified this week"), national ? "" : extra,
+    part("", S.sites.length, national ? "notified" : "notified this week"), national ? "" : extra,
     `<span class="dot">·</span>`, part("c-high", c.HIGH, "HIGH"), `<span class="dot">·</span>`, part("c-medium", c.MEDIUM, "MEDIUM"),
     `<span class="dot">·</span>`, part("c-under", c.UNDER_SURVEYED, "under-surveyed"),
-    national ? `<span class="dot">·</span>${part("", w.agent_dossiers, "agent dossiers")}` : "",
+    national ? `<span class="dot">·</span>${part("", nAgent, "agent dossiers")}` : "",
   ].join(" ");
 }
 
@@ -67,19 +69,125 @@ function renderIntro() {
   if (S.week.scope === "Sweden") $("feed-hint").innerHTML = `Press <kbd>Space</kbd> or <b>Investigate this week</b> to replay the agent's ${S.week.agent_dossiers} investigations; the other ${S.week.notified - S.week.agent_dossiers} sites are rule-only profiles.`;
 }
 
+const countBy = (arr) => arr.reduce((c, s) => ((c[s.priority] = (c[s.priority] || 0) + 1), c), {});
+function inDates(s) { return (!S.filter.from || s.received >= S.filter.from) && (!S.filter.to || s.received <= S.filter.to); }
+
+function renderTools() {
+  const w = S.week;
+  if (w.scope !== "Sweden") return;
+  const opts = (w.counties || []).slice().sort((a, b) => a.county.localeCompare(b.county, "sv"))
+    .map((c) => `<option value="${esc(c.lannr)}">${esc(c.county)}</option>`).join("");
+  $("tools").innerHTML = `
+    <div class="search"><input id="q" type="search" placeholder="Search a site, municipality, forest, park…" autocomplete="off"><div class="results" id="results" hidden></div></div>
+    <select id="region" title="Region"><option value="">All of Sweden</option>${opts}</select>
+    <input id="d-from" type="date" value="${esc(S.filter.from)}" title="Received from">
+    <input id="d-to" type="date" value="${esc(S.filter.to)}" title="Received to">
+    <span class="data-note" id="data-note"></span>`;
+  $("region").onchange = () => { S.filter.lannr = $("region").value; applyFilter(true); };
+  $("d-from").onchange = () => { S.filter.from = $("d-from").value; applyFilter(false); };
+  $("d-to").onchange = () => { S.filter.to = $("d-to").value; applyFilter(false); };
+  let t = null;
+  $("q").oninput = () => { clearTimeout(t); t = setTimeout(() => search($("q").value), 350); };
+  $("q").onkeydown = (e) => { if (e.key === "Enter") { clearTimeout(t); search($("q").value, true); } if (e.key === "Escape") $("results").hidden = true; };
+  document.addEventListener("click", (e) => { if (!e.target.closest(".search")) $("results").hidden = true; });
+  dataNote();
+}
+function dataNote() {
+  const w = S.week, outside = (S.filter.from && S.filter.from < w.received_from) || (S.filter.to && S.filter.to > w.received_to);
+  $("data-note").innerHTML = outside
+    ? `<button class="scan-btn" id="scan-btn">Scan ${esc(regionName())}, ${esc(S.filter.from)}–${esc(S.filter.to)}</button>`
+    : `<span class="muted" title="Using the latest collected data">Data: ${fmtDate(w.received_from, false)}–${fmtDate(w.received_to, false)}${w.built_at ? ", built " + esc(w.built_at.slice(5)) : ""}</span>
+       <button class="scan-btn small" id="scan-btn" title="Fetch the newest notifications for this region (no LLM)">Refresh ${esc(regionName())}</button>`;
+  $("scan-btn").onclick = () => startScan();
+}
+const regionName = () => (S.filter.lannr ? ((S.week.counties || []).find((c) => c.lannr === S.filter.lannr) || {}).county : "Sweden");
+
+function applyFilter(zoom) {
+  S.sites = S.all.filter((s) => (!S.filter.lannr || s.lannr === S.filter.lannr) && inDates(s));
+  const keep = new Set(S.sites.map((s) => s.beteckn));
+  if (S.allSteps) S.replay.steps = S.allSteps.filter((s) => keep.has(s.beteckn));
+  if (S.mapReady) {
+    const fc = (geom) => ({ type: "FeatureCollection", features: S.sites.map((s) => ({ type: "Feature", geometry: geom(s), properties: { beteckn: s.beteckn, priority: s.priority } })) });
+    S.map.getSource("sites").setData(fc((s) => s.polygon));
+    S.map.getSource("dots").setData(fc((s) => ({ type: "Point", coordinates: s.centroid })));
+    if (zoom && S.sites.length) S.map.fitBounds(bbox(S.sites.map((s) => s.centroid)), { padding: ovPad(), maxZoom: 10, duration: 1000 });
+  }
+  renderCounters(); renderIntro(); renderCounties(); dataNote();
+  $("feed-scope").textContent = `${regionName()} · ${fmtDate(S.filter.from, false)}–${fmtDate(S.filter.to, false)}`;
+}
+
+async function search(q, enter = false) {
+  q = q.trim();
+  const box = $("results");
+  if (q.length < 2) { box.hidden = true; return; }
+  const ql = q.toLowerCase();
+  const local = S.all.filter((s) => s.beteckn.toLowerCase().includes(ql) || (s.kommun || "").toLowerCase().includes(ql)).slice(0, 6)
+    .map((s) => ({ kind: "site", label: `${s.beteckn} · ${titleCase(s.kommun)}, ${s.county}`, b: s.beteckn, p: s.priority }));
+  const counties = (S.week.counties || []).filter((c) => c.county.toLowerCase().includes(ql)).map((c) => ({ kind: "county", label: `${c.county} (county)`, l: c.lannr }));
+  let places = [];
+  if (enter || (!local.length && !counties.length) || q.length >= 4) {
+    try { places = (await getJSON(`/api/geocode?q=${encodeURIComponent(q)}`)).map((r) => ({ kind: "place", label: r.name, bbox: r.bbox, type: r.type })); } catch { /* offline: local results only */ }
+  }
+  const all = [...counties, ...local, ...places];
+  box.innerHTML = all.length ? all.map((r, i) => `<button class="res" data-i="${i}"><span class="rk">${r.kind === "site" ? LABEL[r.p] : r.kind === "county" ? "county" : esc(r.type || "place")}</span>${esc(r.label)}</button>`).join("")
+                             : `<div class="res muted">No matches</div>`;
+  box.hidden = false;
+  box.querySelectorAll(".res[data-i]").forEach((el) => (el.onclick = () => {
+    const r = all[+el.dataset.i]; box.hidden = true; showTab("map");
+    if (r.kind === "site") selectSite(r.b);
+    else if (r.kind === "county") { $("region").value = r.l; S.filter.lannr = r.l; applyFilter(true); }
+    else { closeDossier(); S.map.fitBounds([[r.bbox[0], r.bbox[1]], [r.bbox[2], r.bbox[3]]], { padding: ovPad(), maxZoom: 13, duration: 1200 }); }
+  }));
+}
+
+async function startScan() {
+  const body = { lannr: S.filter.lannr || null, from: S.filter.from, to: S.filter.to };
+  $("feed-intro").hidden = true;
+  feed(`Scanning ${esc(regionName())}, ${esc(body.from)}–${esc(body.to)}: fetching notifications and building evidence profiles (no LLM)…`, "site");
+  try {
+    const r = await fetch("/api/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(r.status === 409 ? "a scan is already running" : `scan failed (${r.status})`);
+    let shown = 0;
+    for (let i = 0; i < 900; i++) {
+      await new Promise((res) => setTimeout(res, 1500));
+      const st = await getJSON("/api/scan/status");
+      st.lines.slice(shown).forEach((l) => feed(esc(l))); shown = st.lines.length;
+      if (st.status === "done") { await reloadWeek(); break; }
+      if (st.status === "error") throw new Error(st.error);
+    }
+  } catch (e) { feed(`Scan unavailable: ${esc(e.message)}. The map keeps the collected data.`, "err"); }
+}
+async function reloadWeek() {
+  const week = await getJSON("data/week.json");
+  S.week = week; S.all = week.sites; S.byId = {}; S.all.forEach((s) => (S.byId[s.beteckn] = s));
+  applyFilter(true);
+}
+
 function renderCounties() {
   const w = S.week;
   if (!w.counties) { $("counties").hidden = true; return; }
   document.body.classList.add("has-counties");
+  const countyRows = () => w.counties.map((c) => {
+    const cs = S.all.filter((s) => s.lannr === c.lannr && inDates(s));
+    return { ...c, notified: cs.length, counts: countBy(cs), agent: cs.filter((s) => s.kind !== "rule").length };
+  }).filter((c) => c.notified).sort((a, b) => b.notified - a.notified);
   const c = (x, p) => x.counts[p] || 0;
-  $("counties").innerHTML = `<div class="panel-head"><span>Counties this week</span></div>
-    <div class="cty-note">${esc(w.rubric_note)} Priorities: deterministic rubric for all ${w.notified} sites; the agent reviewed ${w.agent_dossiers} and changed ${w.overrides}.</div>
+  $("counties").innerHTML = `<div class="panel-head"><span>Counties this week</span><button class="collapse" id="cty-collapse" title="Hide">›</button></div>
+    <div class="cty-note">${esc(w.rubric_note)} Priorities: deterministic rubric for all sites; the agent reviewed ${S.sites.filter((s) => s.kind !== "rule").length} of ${S.sites.length} shown.</div>
     <table class="cty"><thead><tr><th>County</th><th>notified</th><th class="h">HIGH</th><th class="m">MED</th><th class="u">under-surv.</th><th>agent</th></tr></thead>
-    <tbody>${w.counties.map((x) => `<tr data-l="${esc(x.lannr)}"><td>${esc(x.county)}${x.rubric_status !== "untested" ? ` <span class="st">${esc(x.rubric_status)}</span>` : ""}</td><td>${x.notified}</td><td class="h">${c(x, "HIGH")}</td><td class="m">${c(x, "MEDIUM")}</td><td class="u">${c(x, "UNDER_SURVEYED")}</td><td>${x.agent}</td></tr>`).join("")}</tbody></table>`;
+    <tbody>${countyRows().map((x) => `<tr data-l="${esc(x.lannr)}"><td>${esc(x.county)}${x.rubric_status !== "untested" ? ` <span class="st">${esc(x.rubric_status)}</span>` : ""}</td><td>${x.notified}</td><td class="h">${c(x, "HIGH")}</td><td class="m">${c(x, "MEDIUM")}</td><td class="u">${c(x, "UNDER_SURVEYED")}</td><td>${x.agent}</td></tr>`).join("")}</tbody></table>`;
+  $("cty-collapse").onclick = () => toggleCounties(false);
   document.querySelectorAll(".cty tbody tr").forEach((tr) => (tr.onclick = () => {
     const pts = S.sites.filter((s) => s.lannr === tr.dataset.l).map((s) => s.centroid);
     if (pts.length) S.map.fitBounds(bbox(pts), { padding: pad(420), maxZoom: 10, duration: 1200 });
   }));
+}
+
+function toggleCounties(open) {
+  S.ctyClosed = !open;
+  document.body.classList.toggle("cty-closed", !open);
+  $("counties").hidden = !open || document.body.classList.contains("dossier-open");
+  $("cty-tab").hidden = open;
 }
 
 function renderHeadline() {
@@ -124,7 +232,7 @@ function initMap() {
   });
 }
 
-const ovPad = () => pad(document.body.classList.contains("has-counties") ? 420 : 0);
+const ovPad = () => pad(document.body.classList.contains("has-counties") && !document.body.classList.contains("cty-closed") ? 420 : 0);
 function pad(extraRight = 0) {
   const feedW = document.querySelector(".feed").getBoundingClientRect().width;
   return { top: 110, bottom: 40, left: feedW + 50, right: 40 + extraRight };
@@ -388,13 +496,14 @@ function renderDossier(d) {
       <div class="hint-line">Rule: ${LABEL[d.rubric_hint.priority]}, ${esc(d.rubric_hint.rule)} ${chips(d.rubric_hint.evidence_ids, ev)}</div></div>
     ${d.contradictions.length ? `<div class="d-sec"><h3>Contradictions</h3><ul>${list(d.contradictions)}</ul></div>` : ""}
     ${ctx}
-    <div class="d-sec not-proven"><h3>What this does not prove</h3><ul>${d.not_established.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>
+    <div class="d-sec not-proven"><h3>⚠ Caution</h3><ul>${d.not_established.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>
     <div class="d-sec"><h3>Next action</h3><div>${esc(d.next_action)}</div></div>
     <div class="d-sec"><h3>Agent path</h3><div class="path">${path || `<span class="muted">${isAgent ? "not recorded" : "no agent run yet"}</span>`}</div></div>
     <div class="d-sec"><h3>Uncertainties</h3><ul>${d.uncertainties.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>
     <button class="live${isAgent ? "" : " primary-live"}" id="live-btn">${isAgent ? "Re-run the agent live" : "Run the agent on this site"} <kbd>L</kbd></button>
-    <div class="hint-line mono">${esc(d.model || "")} · ${esc(d.route || "")} · ${esc((d.recorded_at || "").replace("T", " "))}</div>`;
+    <div class="chat" id="chat"></div>`;
   $("live-btn").onclick = () => investigateLive(d.beteckn);
+  renderChat(d);
   document.querySelectorAll(".more-btn").forEach((b) => (b.onclick = () => {
     const ul = b.dataset.t === "sp" ? document.querySelector(".sp-lines") : document.querySelector(".reasons");
     ul.classList.remove("collapsed"); b.remove();
@@ -405,15 +514,22 @@ const titleCase = (s) => String(s || "").toLowerCase().replace(/(^|[\s-])\p{L}/g
 
 function closeDossier() {
   document.body.classList.remove("dossier-open");
-  if ($("counties")) $("counties").hidden = !S.week || !S.week.counties;
+  if ($("counties")) $("counties").hidden = !S.week || !S.week.counties || S.ctyClosed;
   $("dossier").setAttribute("aria-hidden", "true");
   if (!S.mapReady) return;
   setSelected(null); S.current = null;
   for (const src of ["rings", "species", "halos", "fellings"]) S.map.getSource(src).setData(empty());
   S.ringMarkers.forEach((m) => m.remove()); S.ringMarkers = [];
   history.replaceState(null, "", "#");
-  S.map.fitBounds(bbox(S.sites.map((s) => s.centroid)), { padding: ovPad(), pitch: document.body.classList.contains("replaying") ? 0 : 30, duration: 900 });
+  S.map.fitBounds(bbox(visibleSites().map((s) => s.centroid)), { padding: ovPad(), pitch: document.body.classList.contains("replaying") ? 0 : 30, duration: 900 });
 }
+
+function overview() {
+  showTab("map");
+  if (document.body.classList.contains("dossier-open")) closeDossier();
+  else if (S.mapReady) S.map.fitBounds(bbox(visibleSites().map((s) => s.centroid)), { padding: ovPad(), pitch: 30, duration: 900 });
+}
+function visibleSites() { return S.sites.length ? S.sites : S.all; }
 
 function stepSite(dir) {
   const order = S.sites.map((s) => s.beteckn);
@@ -422,8 +538,9 @@ function stepSite(dir) {
 }
 
 /* ------------------------------------------------------------------ replay */
-function feed(html, cls = "") {
+function feed(html, cls = "", b = null) {
   const li = document.createElement("li"); li.className = cls; li.innerHTML = html;
+  if (b) { li.classList.add("clickable"); li.title = "Open this site"; li.onclick = () => selectSite(b); }
   $("feed-list").appendChild(li);
   const list = $("feed-list"); list.scrollTop = list.scrollHeight;
   $("feed-hint").hidden = true;
@@ -443,11 +560,11 @@ function resetReplay() {
   clearTimeout(S.timer);
   $("feed-intro").hidden = true;
   closeDossier();
-  S.map.fitBounds(bbox(S.sites.map((s) => s.centroid)), { padding: ovPad(), pitch: 0, duration: 900 });
+  S.map.fitBounds(bbox(visibleSites().map((s) => s.centroid)), { padding: ovPad(), pitch: 0, duration: 900 });
   $("feed-list").innerHTML = "";
   S.sites.forEach((s) => setFade(s.beteckn, s.kind === "rule" ? 1 : 0)); // rule-only sites keep their rubric colour
   S.step = 0; S.lastSite = null; S.finished = false;
-  if (S.week.scope === "Sweden") feed(`Replaying the agent's ${S.week.agent_dossiers} investigations. The other ${S.week.notified - S.week.agent_dossiers} sites are rule-only profiles and keep their rubric colour.`, "site");
+  if (S.week.scope === "Sweden") { const na = S.sites.filter((s) => s.kind !== "rule").length; feed(`Replaying the agent's ${na} investigations in ${esc(regionName())}. The other ${S.sites.length - na} sites are rule-only profiles and keep their rubric colour.`, "site"); }
 }
 function toggleReplay() {
   if (!S.replay || !S.mapReady) return;
@@ -465,7 +582,7 @@ function pauseReplay() {
 function showStep(s, animate = true) {
   if (s.beteckn !== S.lastSite) {
     const site = S.byId[s.beteckn];
-    feed(`<span class="mono">${esc(s.beteckn)}</span> · ${esc(titleCase(site.kommun))} · ${esc(site.area_ha)} ha`, "site");
+    feed(`<span class="mono">${esc(s.beteckn)}</span> · ${esc(titleCase(site.kommun))} · ${esc(site.area_ha)} ha`, "site", s.beteckn);
     S.lastSite = s.beteckn;
   }
   const site = S.byId[s.beteckn];
@@ -513,7 +630,7 @@ async function investigateLive(b) {
   if (S.liveBusy || !b) return;
   S.liveBusy = true;
   const btn = $("live-btn"); if (btn) btn.disabled = true;
-  feed(`<span class="mono">${esc(b)}</span> · live investigation`, "site");
+  feed(`<span class="mono">${esc(b)}</span> · live investigation`, "site", b);
   try {
     const r = await fetch(`/api/live/${fileId(b)}`, { method: "POST" });
     if (!r.ok) throw new Error(String(r.status));
@@ -522,7 +639,12 @@ async function investigateLive(b) {
       await new Promise((res) => setTimeout(res, 600));
       const st = await getJSON("/api/live/status");
       st.lines.slice(shown).forEach((l) => feed(esc(l))); shown = st.lines.length;
-      if (st.status === "done") { const d = await loadSite(b, true); feed(`Verdict: ${LABEL[d.priority]}.`, `verdict p-${d.priority}`); renderDossier(d); syncPriority(b, d.priority); break; }
+      if (st.status === "done") {
+        const d = await loadSite(b, true);
+        feed(`Verdict: ${LABEL[d.priority]}.`, `verdict p-${d.priority}`, b);
+        if (S.current === b) { renderDossier(d); selectSite(b, { fly: false }); }
+        syncPriority(b, d.priority); break;
+      }
       if (st.status === "error") throw new Error(st.error);
     }
   } catch (e) { // live unavailable: say so, then show this site's recorded investigation
@@ -542,6 +664,93 @@ function syncPriority(b, p) { // keep map colours and counters consistent with a
   S.map.getSource("dots").setData(fc((s) => ({ type: "Point", coordinates: s.centroid })));
   S.week.counts = S.sites.reduce((c, s) => ((c[s.priority] = (c[s.priority] || 0) + 1), c), {});
   renderCounters();
+}
+
+/* ------------------------------------------------------------------ chat about one site */
+S.chats = {};
+function renderChat(d) {
+  const b = d.beteckn, el = $("chat");
+  if (!el) return;
+  const sp = (d.species_lines || [])[0];
+  const sugg = [
+    "Make a field-visit plan for this site before the window closes",
+    sp ? `What should a reviewer know about ${sp.swedish || sp.scientific} (${sp.scientific})?` : "Which records matter most here?",
+    "Chart the red-listed records near this site by year",
+  ];
+  el.innerHTML = `<h3>Ask about this site</h3>
+    <div class="chat-log" id="chat-log"></div>
+    <div class="chat-sugg">${sugg.map((q) => `<button class="sugg">${esc(q)}</button>`).join("")}</div>
+    <form class="chat-form" id="chat-form"><textarea id="chat-in" rows="2" placeholder="Ask about this site, its species, or what to check in the field"></textarea><button type="submit" class="primary">Ask</button></form>`;
+  (S.chats[b] || []).forEach((m) => chatBubble(m, d));
+  el.querySelectorAll(".sugg").forEach((x) => (x.onclick = () => sendChat(d, x.textContent)));
+  $("chat-form").onsubmit = (e) => { e.preventDefault(); const q = $("chat-in").value.trim(); if (q) sendChat(d, q); };
+  $("chat-in").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("chat-form").requestSubmit(); } };
+}
+function chatBubble(m, d) {
+  const div = document.createElement("div");
+  div.className = `msg ${m.role}`;
+  div.innerHTML = m.role === "user" ? esc(m.content) : richText(m.content, d.evidence) + (m.sources && m.sources.length
+    ? `<div class="srcs">Sources: ${m.sources.map((s) => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title || s.url)}</a>`).join(" · ")}</div>` : "");
+  $("chat-log").appendChild(div);
+  div.scrollIntoView({ block: "nearest" });
+  return div;
+}
+async function sendChat(d, q) {
+  const b = d.beteckn;
+  const hist = (S.chats[b] = S.chats[b] || []);
+  hist.push({ role: "user", content: q });
+  chatBubble(hist[hist.length - 1], d);
+  $("chat-in").value = "";
+  const wait = chatBubble({ role: "assistant", content: "Looking into it…" }, d);
+  wait.classList.add("pending");
+  try {
+    const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ beteckn: b, messages: hist.map(({ role, content }) => ({ role, content })) }) });
+    if (!r.ok) throw new Error(r.status === 503 ? "Chat needs the live backend with an API key." : `Chat failed (${r.status}).`);
+    const ans = await r.json();
+    wait.remove();
+    hist.push({ role: "assistant", content: ans.text, sources: ans.sources });
+    chatBubble(hist[hist.length - 1], d);
+  } catch (e) {
+    wait.classList.remove("pending"); wait.innerHTML = esc(e.message);
+    hist.pop();
+  }
+}
+function richText(t, ev) {
+  const parts = String(t).split(/```chart\s*([\s\S]*?)```/);
+  return parts.map((p, i) => {
+    if (i % 2 === 1) { try { return chartSVG(JSON.parse(p)); } catch { return ""; } }
+    let h = esc(p).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/(^|[^*])\*(?!\s)(.+?)\*/g, "$1<i>$2</i>")
+      .replace(/\[(E-\d+)\]/g, (m, id) => chips([id], ev || {}));
+    const lines = h.split("\n"), out = [];
+    let inList = false;
+    for (const ln of lines) {
+      const li = ln.match(/^\s*[-•]\s+(.*)/) || ln.match(/^\s*\d+\.\s+(.*)/);
+      if (li) { if (!inList) { out.push("<ul>"); inList = true; } out.push(`<li>${li[1]}</li>`); continue; }
+      if (inList) { out.push("</ul>"); inList = false; }
+      if (ln.trim().startsWith("#")) out.push(`<p><b>${ln.replace(/^#+\s*/, "")}</b></p>`);
+      else if (ln.trim()) out.push(`<p>${ln}</p>`);
+    }
+    if (inList) out.push("</ul>");
+    return out.join("");
+  }).join("");
+}
+function chartSVG(c) {
+  const x = c.x || [], s = (c.series || [])[0] || { values: [] }, v = s.values.map(Number);
+  if (!x.length || !v.length) return "";
+  const W = 340, H = 170, L = 30, B = 34, T = 22, max = Math.max(...v, 1), bw = (W - L - 8) / x.length;
+  const y = (n) => T + (H - T - B) * (1 - n / max);
+  let g = "";
+  if (c.type === "line") {
+    const pts = v.map((n, i) => `${L + i * bw + bw / 2},${y(n)}`).join(" ");
+    g += `<polyline points="${pts}" fill="none" stroke="#CFE3C8" stroke-width="2.5"/>` + v.map((n, i) => `<circle cx="${L + i * bw + bw / 2}" cy="${y(n)}" r="3" fill="#CFE3C8"/>`).join("");
+  } else {
+    g += v.map((n, i) => `<rect x="${L + i * bw + 3}" y="${y(n)}" width="${Math.max(2, bw - 6)}" height="${H - B - y(n)}" rx="2" fill="#8FBF9A"/>`).join("");
+  }
+  g += v.map((n, i) => `<text x="${L + i * bw + bw / 2}" y="${y(n) - 4}" font-size="10" fill="#E8EFE9" text-anchor="middle">${n}</text>`).join("");
+  g += x.map((lab, i) => `<text x="${L + i * bw + bw / 2}" y="${H - B + 14}" font-size="10" fill="#9AABA1" text-anchor="middle">${esc(String(lab)).slice(0, 10)}</text>`).join("");
+  return `<figure class="chart"><svg viewBox="0 0 ${W} ${H}"><text x="${L}" y="13" font-size="11.5" fill="#E8EFE9" font-weight="600">${esc(c.title || "")}</text>${g}
+    <line x1="${L}" x2="${W - 4}" y1="${H - B}" y2="${H - B}" stroke="#26342D"/></svg><figcaption>${esc(c.unit || "")} · from this site's evidence</figcaption></figure>`;
 }
 
 /* ------------------------------------------------------------------ evidence test tab */
@@ -637,12 +846,16 @@ function renderCondense() {
 
 /* ------------------------------------------------------------------ tabs, keys, hash */
 function showTab(name) {
-  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
   $("view-map").hidden = name !== "map"; $("view-evidence").hidden = name !== "evidence"; $("view-condense").hidden = name !== "condense";
   if (name === "map" && S.map) S.map.resize();
 }
 function bindUI() {
-  document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => showTab(t.dataset.tab)));
+  $("brand").onclick = overview;
+  $("brand").onkeydown = (e) => { if (e.key === "Enter") overview(); };
+  $("overview-btn").onclick = overview;
+  $("evidence-open").onclick = () => showTab("evidence");
+  $("evidence-back").onclick = () => showTab("map");
+  $("cty-tab").onclick = () => toggleCounties(true);
   $("investigate").onclick = () => { showTab("map"); toggleReplay(); };
   $("dossier-close").onclick = closeDossier;
   $("about-open").onclick = () => $("about").classList.add("open");
@@ -654,10 +867,9 @@ function bindUI() {
     else if (e.key === "ArrowLeft") { if (!S.playing) stepSite(-1); }
     else if (e.key === "1") showTab("map");
     else if (e.key === "2") showTab("evidence");
-    else if (e.key === "3") showTab("condense");
     else if (e.key.toLowerCase() === "l") investigateLive(S.current);
     else if (e.key.toLowerCase() === "f") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); }
-    else if (e.key === "Escape") { closeDossier(); $("about").classList.remove("open"); }
+    else if (e.key === "Escape") { $("about").classList.remove("open"); overview(); }
   });
 }
 let hashApplied = false;

@@ -508,6 +508,64 @@ def main() -> None:
     print(f"web/data: {len(sites)} sites, {len(replay)} replay steps, counts {dict(counts)}")
 
 
+def site_summary(b: str, lannr: str, payload: dict) -> dict:
+    n = payload["notification"]
+    head = payload["rubric_hint"]["rule"][0].upper() + payload["rubric_hint"]["rule"][1:]
+    return {"beteckn": b, "lannr": lannr, "county": COUNTY_NAMES.get(lannr, lannr), "kommun": n["kommun"],
+            "area_ha": n["polygon_ha"], "received": n["inkomdatum"], "window_closes": payload["window_closes"],
+            "priority": payload["priority"], "rubric_hint": payload["rubric_hint"]["priority"], "kind": payload["kind"],
+            "overridden": False, "headline": head, "centroid": n["centroid"],
+            "polygon": _gj(geo.from_geojson(payload["geometry"]["site"]), 0.0001), "rank": 9999}
+
+
+def add_rule_sites(items: list[dict], progress=None) -> list[dict]:
+    """Scan: build rule-only profiles for new notifications and merge them into week.json (no LLM)."""
+    load_photos()
+    week = json.loads((WEB / "week.json").read_text())
+    have = {x["beteckn"] for x in week["sites"]}
+    new = []
+    for i, it in enumerate([x for x in items if x["beteckn"] not in have], 1):
+        prof = tools._profile(it["beteckn"])
+        payload = rule_payload(it["beteckn"], prof, it["lannr"])
+        (WEB / "sites" / f"{it['beteckn'].replace(' ', '_')}.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+        new.append(site_summary(it["beteckn"], it["lannr"], payload))
+        if progress:
+            progress(i, it["beteckn"], payload["priority"])
+    if new:
+        week["sites"] += new
+        keyed = []
+        for x in week["sites"]:
+            f = WEB / "sites" / f"{x['beteckn'].replace(' ', '_')}.json"
+            c = json.loads(f.read_text())["counts"]
+            keyed.append((rank.key({"priority": x["priority"], "counts": c}), x["beteckn"]))
+        order = {b: r for r, (_, b) in enumerate(sorted(keyed), 1)}
+        for x in week["sites"]:
+            x["rank"] = order[x["beteckn"]]
+        week["sites"].sort(key=lambda x: x["rank"])
+        week["notified"] = len(week["sites"])
+        week["counts"] = dict(Counter(x["priority"] for x in week["sites"]))
+        week["received_from"] = min(x["received"] for x in week["sites"])
+        week["received_to"] = max(x["received"] for x in week["sites"])
+        known = {c["lannr"]: c for c in week.get("counties", [])}
+        for l in {x["lannr"] for x in new} - set(known):
+            known[l] = {"lannr": l, "county": COUNTY_NAMES.get(l, l), "rubric_status": RUBRIC_STATUS.get(l, "untested")}
+        week["counties"] = list(known.values())
+        week["built_at"] = time_now()
+        (WEB / "week.json").write_text(json.dumps(week, ensure_ascii=False, separators=(",", ":")))
+        lst = config.OUT / "national_week.json"
+        if lst.exists():
+            cur = json.loads(lst.read_text())
+            names = {x["beteckn"] for x in cur}
+            cur += [{"beteckn": x["beteckn"], "lannr": x["lannr"], "lan": x["county"]} for x in new if x["beteckn"] not in names]
+            lst.write_text(json.dumps(cur, ensure_ascii=False))
+    return new
+
+
+def time_now() -> str:
+    import datetime as _dt
+    return _dt.datetime.now().strftime("%Y-%m-%d %H:%M")
+
+
 def main_national() -> None:
     """All of Sweden this week: agent dossiers where an agent ran, rule-only profiles everywhere else."""
     load_photos()
@@ -570,6 +628,7 @@ def main_national() -> None:
             "agent_dossiers": sum(x["kind"] == "agent" for x in sites), "overrides": sum(x["overridden"] for x in sites),
             "window_days": WINDOW_DAYS, "counties": counties,
             "rubric_note": "Rubric tuned on Dalarna, tested on Gävleborg and Värmland; elsewhere applied untested.",
+            "built_at": time_now(),
             "sites": sites}
     (WEB / "week.json").write_text(json.dumps(week, ensure_ascii=False, separators=(",", ":")))
     (WEB / "replay.json").write_text(json.dumps({"steps": replay, "sites": len({r["beteckn"] for r in replay})}, ensure_ascii=False))
