@@ -1,7 +1,5 @@
 # WitnessWoods
 
-*One dataset can lie. We ask all of them.* · *Evidence before the saw.*
-
 Every week, new forests are notified for felling across Sweden. Regeneration felling of 0.5 ha or more normally may not start until six weeks after notification, and that window is the only time human ecologists can look at a site. Nobody can check every notification by hand.
 
 WitnessWoods triages newly notified felling sites for human ecological review. Its agent, **Forest Witness**, cross-examines independent open datasets for each notification and writes an evidence dossier:
