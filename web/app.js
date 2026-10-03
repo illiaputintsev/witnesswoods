@@ -273,7 +273,46 @@ function canvasImage(w, h, draw) {
   const g = c.getContext("2d"); draw(g);
   return g.getImageData(0, 0, w, h);
 }
+function pinePath(g, w, h) {
+  // one solid silhouette: three tiers drawn as a single zig-zag outline above a short trunk
+  const cx = w / 2, top = h * 0.04, base = h * 0.8;
+  const t = [[0.38, 0.22], [0.62, 0.34], [1.0, 0.46]];   // [height fraction, half-width fraction] per tier
+  const ys = t.map(([f]) => top + (base - top) * f), ws = t.map(([, k]) => w * k);
+  g.beginPath(); g.moveTo(cx, top);
+  g.lineTo(cx + ws[0], ys[0]); g.lineTo(cx + ws[0] * 0.42, ys[0]);
+  g.lineTo(cx + ws[1], ys[1]); g.lineTo(cx + ws[1] * 0.45, ys[1]);
+  g.lineTo(cx + ws[2], ys[2]); g.lineTo(cx - ws[2], ys[2]);
+  g.lineTo(cx - ws[1] * 0.45, ys[1]); g.lineTo(cx - ws[1], ys[1]);
+  g.lineTo(cx - ws[0] * 0.42, ys[0]); g.lineTo(cx - ws[0], ys[0]);
+  g.closePath();
+}
+function pineImage(fill, opts = {}) {
+  const W = 48, H = 56;
+  return canvasImage(W, H, (g) => {
+    g.lineJoin = "round";
+    g.fillStyle = "#3a2c22"; g.strokeStyle = "rgba(13,20,17,0.9)"; g.lineWidth = 2;
+    g.fillRect(W / 2 - 3.5, H * 0.78, 7, H * 0.18); g.strokeRect(W / 2 - 3.5, H * 0.78, 7, H * 0.18);   // trunk
+    pinePath(g, W, H);
+    if (opts.hollow) { g.fillStyle = "rgba(140,154,160,0.3)"; g.fill(); g.setLineDash([4, 3]); g.strokeStyle = fill; g.lineWidth = 3; g.stroke(); return; }
+    g.fillStyle = fill; g.fill();
+    g.save(); g.clip(); g.fillStyle = "rgba(255,255,255,0.18)"; g.fillRect(0, 0, W / 2, H); g.restore();  // light from the left
+    g.strokeStyle = "rgba(13,20,17,0.9)"; g.lineWidth = 2.5; g.stroke();
+  });
+}
+function stumpImage() {
+  const W = 44, H = 52;
+  return canvasImage(W, H, (g) => {
+    g.fillStyle = "#6B5444"; g.strokeStyle = "rgba(13,20,17,0.9)"; g.lineWidth = 2.5;
+    g.beginPath(); g.moveTo(9, 30); g.lineTo(9, 46); g.quadraticCurveTo(22, 52, 35, 46); g.lineTo(35, 30); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.ellipse(22, 30, 13, 5, 0, 0, Math.PI * 2); g.fillStyle = "#c7a786"; g.fill(); g.stroke();
+    g.strokeStyle = "#8a6a52"; g.lineWidth = 1.2; g.beginPath(); g.ellipse(22, 30, 7, 2.6, 0, 0, Math.PI * 2); g.stroke();
+  });
+}
 function addImages(map) {
+  for (const [p, c] of Object.entries(COL)) {
+    map.addImage(`pine-${p}`, p === "ALREADY_FELLED" ? stumpImage() : pineImage(c, { hollow: p === "UNDER_SURVEYED" }), { pixelRatio: 2 });
+  }
+  map.addImage("pine-pending", pineImage("#6f7d76"), { pixelRatio: 2 });
   map.addImage("hatch", canvasImage(16, 16, (g) => {
     g.strokeStyle = "rgba(140,154,160,0.95)"; g.lineWidth = 2.2;
     for (let i = -16; i <= 32; i += 8) { g.beginPath(); g.moveTo(i, 16); g.lineTo(i + 16, 0); g.stroke(); }
@@ -321,13 +360,17 @@ function addLayers(map) {
   map.addLayer({ id: "sites-selected", type: "line", source: "sites", paint: { "line-color": MOSS, "line-width": 3, "line-opacity": ["case", SEL, 1, 0] } });
   // centroid dots so 1-5 ha sites read at county zoom; they fade out as the real polygons become visible
   map.addLayer({ id: "dots-glow", type: "circle", source: "dots", maxzoom: 12.5, filter: ["==", ["get", "priority"], "HIGH"],
-                 paint: { "circle-color": COL.HIGH, "circle-radius": 11, "circle-blur": 1, "circle-opacity": ["*", 0.6, FADE] } });
-  map.addLayer({ id: "dots", type: "circle", source: "dots", maxzoom: 12.5,
-                 layout: { "circle-sort-key": ["match", ["get", "priority"], "HIGH", 4, "MEDIUM", 3, "LOW", 2, 1] },
-                 paint: { "circle-color": ["case", ["<", FADE, 0.5], GREY, color], "circle-radius": ["case", ["<", FADE, 0.5], 2, ["match", ["get", "priority"], "HIGH", 5, "MEDIUM", 4, 3]],
-                          "circle-opacity": ["case", ["<", FADE, 0.5], 0.45, ["==", ["get", "priority"], "UNDER_SURVEYED"], 0.35, ["==", ["get", "priority"], "ALREADY_FELLED"], 0, 0.95],
-                          "circle-stroke-color": ["case", ["<", FADE, 0.5], GREY, color], "circle-stroke-width": 1.5,
-                          "circle-stroke-opacity": ["case", ["<", FADE, 0.5], 0.4, 1] } });
+                 paint: { "circle-color": COL.HIGH, "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 9, 9, 14], "circle-blur": 1,
+                          "circle-opacity": ["*", 0.55, FADE], "circle-translate": [0, -6] } });
+  const pineSize = (k) => ["interpolate", ["linear"], ["zoom"], 4, ["*", k, ["match", ["get", "priority"], "HIGH", 0.66, "MEDIUM", 0.54, 0.48]],
+                                                     9, ["*", k, ["match", ["get", "priority"], "HIGH", 1.05, "MEDIUM", 0.9, 0.8]],
+                                                     12, ["*", k, ["match", ["get", "priority"], "HIGH", 1.25, "MEDIUM", 1.1, 1.0]]];
+  const pineLayout = (img) => ({ "icon-image": img, "icon-size": pineSize(1), "icon-anchor": "bottom", "icon-allow-overlap": true,
+                                 "icon-ignore-placement": true, "symbol-sort-key": ["match", ["get", "priority"], "HIGH", 4, "MEDIUM", 3, "LOW", 2, 1] });
+  map.addLayer({ id: "pines-pending", type: "symbol", source: "dots", maxzoom: 12.5, layout: { ...pineLayout("pine-pending"), "icon-size": pineSize(0.75) },
+                 paint: { "icon-opacity": ["case", ["<", FADE, 0.5], 0.55, 0] } });
+  map.addLayer({ id: "dots", type: "symbol", source: "dots", maxzoom: 12.5, layout: pineLayout(["concat", "pine-", ["get", "priority"]]),
+                 paint: { "icon-opacity": ["case", ["<", FADE, 0.5], 0, 1] } });
   map.addLayer({ id: "rings", type: "line", source: "rings", paint: { "line-color": SNOW, "line-width": 1, "line-opacity": 0.75, "line-dasharray": [3, 3] } });
   const pcol = ["case", ["get", "eligible"], COL.HIGH, COL.MEDIUM];
   map.addLayer({ id: "species-halo", type: "circle", source: "halos",
