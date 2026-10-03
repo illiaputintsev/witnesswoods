@@ -18,13 +18,13 @@ def print_profile(p: dict) -> None:
           f"{n['anmald_ha']} ha notified, polygon {n['polygon_ha']} ha | status: {n['status']}")
     print(f"  completed felling overlap: {f['overlap_ha']} ha = {f['overlap_pct']}%  [{f['evidence_id']}]  "
           + ", ".join(f"{x['beteckn']} felled {x['avvdatum']}" for x in f["fellings"]))
-    print(f"  effort within {e['radius_m']} m of centroid since 2016: {e['records']} records, {e['species']} species; "
+    print(f"  effort within {e['radius_m']} m of the polygon since 2016: {e['records']} records, {e['species']} species, {e['days']} days; "
           f"county median {e['county_median']}, p25 {e['county_p25']} -> {e['level'].upper()} "
           f"(percentile {e['percentile']})  [{e['evidence_id']}]")
     j = p["join"]
     print(f"  GBIF records within 1 km: {j.get('records', 0)} (fetched {p['fetched']}, truncated: {p['truncated']}); "
           f"with Dyntaxa ID {j.get('with_dyntaxa_id', 0)}; red-listed by ID {j.get('redlisted_by_id', 0)}, "
-          f"by name {j.get('redlisted_by_name', 0)}")
+          f"by name {j.get('redlisted_by_name', 0)}; no stated uncertainty {j.get('no_uncertainty', 0)}")
     print(f"  {'ring':>6} {'allow':>6} {'recs':>5} {'kept':>5} {'drop_u':>6} {'no_u':>5} {'spp':>4} {'days':>4}  "
           f"T/F/X/S  NT-S  mobile")
     for r in RINGS:
@@ -39,8 +39,8 @@ def print_profile(p: dict) -> None:
         for sp in sorted(widest["redlisted"].values(), key=lambda s: (order.get(s["category"], 9), s["min_distance_m"])):
             first = min(r for r in RINGS if sp["taxon_id"] in p["rings"][r]["redlisted"])
             print(f"    {sp['category']:<2} {_flags(sp)} {sp['scientific_name']} ({sp['swedish_name']}, {sp['group']}): "
-                  f"{sp['records']} rec, latest {sp['latest_year']}, min unc {sp['min_uncertainty_m']:.0f} m, "
-                  f"min dist {sp['min_distance_m']} m, from ring {first} m  [{sp['evidence_id']}]")
+                  f"{sp['records']} rec, latest {sp['latest_year']}, nearest {sp['nearest_record']['dist_m']} m "
+                  f"(±{sp['nearest_record']['unc_m']:.0f} m, {sp['nearest_record']['year']}), from ring {first} m  [{sp['evidence_id']}]")
     if widest["excluded_dd_re"]:
         print(f"  DD/RE (excluded from priority): {', '.join(widest['excluded_dd_re'])}")
 
@@ -70,6 +70,8 @@ def print_table(profiles: list[dict]) -> None:
           f"({100 * tot['with_dyntaxa_id'] / recs:.1f}%); red-listed via ID {tot['redlisted_by_id']}, "
           f"via name fallback {tot['redlisted_by_name']} {sorted(names) if names else ''}")
     levels = Counter(p["effort"]["level"] for p in profiles)
+    print(f"Records without coordinate uncertainty: {tot['no_uncertainty']} of {tot['records']} "
+          f"({100 * tot['no_uncertainty'] / recs:.1f}%)")
     print(f"Effort levels: {dict(levels)}; truncated fetches: {sum(p['truncated'] for p in profiles)}")
 
 

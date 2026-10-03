@@ -3,12 +3,11 @@
 Ring r = "within r metres of the polygon edge" (cumulative; 0 = inside).
 A record supports a ring only if its coordinate uncertainty is no larger than
 the ring's radius. For ring 0 the allowance is the site's equivalent radius
-(radius of a circle with the site's area), since nothing has uncertainty 0.
-Records with no stated uncertainty never support a ring claim.
+(radius of a circle with the site's area), since nothing has uncertainty 0,
+capped at 100 m so ring 0 stays a subset of ring 100. Records with no stated
+uncertainty never support a ring claim.
 """
 from collections import defaultdict
-
-from shapely.geometry import Point
 
 from fw import effort, evidence, gbif, geo, redlist, skogs
 
@@ -17,7 +16,23 @@ SINCE_YEAR = 2016
 
 
 def _allowance(ring: int, site_radius: float) -> float:
-    return ring if ring > 0 else site_radius
+    return ring if ring > 0 else min(site_radius, RINGS[1])
+
+
+def _rec(r: dict, d: float) -> dict:
+    return {"key": r["key"], "dist_m": round(d), "unc_m": r["coordinateUncertaintyInMeters"], "year": r.get("year")}
+
+
+def ring_summary(buffer_m: int, ring: dict) -> dict:
+    """Evidence payload for one ring: counts plus one line per red-listed species (nearest qualifying record)."""
+    return {"buffer_m": buffer_m, "since_year": SINCE_YEAR,
+            **{k: ring[k] for k in ("allowance_m", "records", "kept", "dropped_uncertainty", "dropped_no_uncertainty",
+                                     "species", "days", "threatened", "threatened_forest", "threatened_forest_felling",
+                                     "eligible", "nt_eligible", "mobile_supporting", "excluded_dd_re")},
+            "redlisted": [{"name": s["scientific_name"], "category": s["category"], "records": s["records"],
+                           "latest_year": s["latest_year"], "nearest_record": s["nearest_record"],
+                           "evidence_id": s["evidence_id"]}
+                          for s in sorted(ring["redlisted"].values(), key=lambda s: (s["scientific_name"]))]}
 
 
 def _flags(sp: dict) -> str:
@@ -31,7 +46,6 @@ def _flags(sp: dict) -> str:
 def build(beteckn: str, lannr_ref: str | None = None) -> dict:
     n = skogs.get_notification(beteckn)
     site = geo.from_geojson(n["geometry"])
-    site_3006 = geo.to_3006(site)
     site_radius = geo.equivalent_radius_m(site)
     centroid = site.centroid
 
@@ -43,27 +57,24 @@ def build(beteckn: str, lannr_ref: str | None = None) -> dict:
     e_fell = evidence.add(beteckn, "completed_felling", {k: v for k, v in fell.items() if k != "source_url"},
                           fell["source_url"])
 
+    # Fetch every record within 1000 m of the polygon once. Effort and all rings use these same rows.
+    near = gbif.records_within(site, max(RINGS), SINCE_YEAR)
     ref = effort.county_reference(lannr_ref or n["lannr"])
-    eff = gbif.effort_circle(site, effort.RADIUS_M, SINCE_YEAR)
+    eff = {"radius_m": effort.RADIUS_M, **gbif.effort_stats(near["rows"]), "truncated": near["truncated"]}
     eff.update(county_median=ref["median_records"], county_p25=ref["p25_records"],
                percentile=effort.percentile(eff["records"], ref), level=effort.level(eff["records"], ref),
-               reference=f"{ref['sample']} {ref['lannr']} notifications, {ref['window'][0]}..{ref['window'][1]}")
-    e_eff = evidence.add(beteckn, "observation_effort", {k: v for k, v in eff.items() if k != "source_url"},
-                         eff["source_url"])
+               definition="records since 2016 within 1000 m of the polygon, coordinate uncertainty <= 1000 m",
+               reference=f"{ref['sample']} county {ref['lannr']} notifications, {ref['window'][0]}..{ref['window'][1]}")
+    e_eff = evidence.add(beteckn, "observation_effort", eff, near["source_url"])
+    fetched = {"total": near["fetched"], "truncated": near["truncated"], "source_url": near["source_url"]}
 
-    # Fetch every record within ~1 km of the polygon once, then sort into rings locally
-    fetched = gbif.fetch_records(geo.buffer_4326(site, max(RINGS) + 50))
     join = defaultdict(int)
     rows = []
-    for r in fetched["records"]:
-        if r.get("decimalLongitude") is None:
-            continue
-        d = site_3006.distance(geo.to_3006(Point(r["decimalLongitude"], r["decimalLatitude"])))
-        if d > max(RINGS):
-            continue
+    for r, d in near["rows"]:
         row, how = redlist.match(r.get("taxonID"), r.get("species"))
         join["records"] += 1
         join["with_dyntaxa_id"] += redlist.dyntaxa_id(r.get("taxonID")) is not None
+        join["no_uncertainty"] += r.get("coordinateUncertaintyInMeters") is None
         if how:
             join[f"redlisted_by_{how}"] += 1
             if how == "name":
@@ -71,7 +82,6 @@ def build(beteckn: str, lannr_ref: str | None = None) -> dict:
         rows.append((r, d, row))
 
     rings = {}
-    species_ev = {}
     for ring in RINGS:
         allow = _allowance(ring, site_radius)
         in_ring = [(r, d, row) for r, d, row in rows if d <= ring]
@@ -82,14 +92,15 @@ def build(beteckn: str, lannr_ref: str | None = None) -> dict:
             if row is None:
                 continue
             tid = int(row["taxon_id"])
-            sp = red.setdefault(tid, {**redlist.species_summary(row), "records": 0, "latest_year": 0,
-                                      "min_uncertainty_m": None, "min_distance_m": None, "record_keys": []})
+            sp = red.setdefault(tid, {**redlist.species_summary(row), "records": 0, "latest_year": 0, "recs": []})
             sp["records"] += 1
             sp["latest_year"] = max(sp["latest_year"], r.get("year") or 0)
-            u = r["coordinateUncertaintyInMeters"]
-            sp["min_uncertainty_m"] = u if sp["min_uncertainty_m"] is None else min(sp["min_uncertainty_m"], u)
-            sp["min_distance_m"] = round(d) if sp["min_distance_m"] is None else min(sp["min_distance_m"], round(d))
-            sp["record_keys"].append(r["key"])
+            sp["recs"].append(_rec(r, d))
+        for sp in red.values():
+            # Each record keeps its own distance, uncertainty and year; nearest first
+            sp["recs"].sort(key=lambda x: (x["dist_m"], x["unc_m"], -(x["year"] or 0)))
+            sp["nearest_record"] = sp["recs"][0]
+            sp["min_distance_m"] = sp["recs"][0]["dist_m"]
         priority_pool = [s for s in red.values() if s["category"] not in redlist.EXCLUDED]
         thr = [s for s in priority_pool if s["category"] in redlist.THREATENED]
         thr_f = [s for s in thr if s["forest_associated"]]
@@ -110,18 +121,32 @@ def build(beteckn: str, lannr_ref: str | None = None) -> dict:
                                      if s["category"] in redlist.EXCLUDED),
             "redlisted": red,
         }
-        for tid, sp in red.items():  # keep the widest-ring record set per species as its evidence
-            species_ev[tid] = sp
 
-    # One evidence item per red-listed species, carrying the smallest ring it qualifies in
-    for tid, sp in species_ev.items():
-        first_ring = min(r for r in RINGS if tid in rings[r]["redlisted"])
-        payload = {**{k: v for k, v in sp.items() if k != "record_keys"}, "smallest_ring_m": first_ring,
-                   "record_urls": [gbif.record_url(k) for k in sp["record_keys"][:10]]}
+    # One evidence item per red-listed species. It states its scope explicitly: the nearest
+    # qualifying record per ring, and record links ordered from the smallest qualifying ring outwards.
+    all_tids = sorted({tid for r in RINGS for tid in rings[r]["redlisted"]})
+    for tid in all_tids:
+        in_rings = [r for r in RINGS if tid in rings[r]["redlisted"]]
+        first = rings[in_rings[0]]["redlisted"][tid]
+        widest = rings[in_rings[-1]]["redlisted"][tid]
+        ordered = list(first["recs"]) + [x for x in widest["recs"] if x not in first["recs"]]
+        payload = {
+            **{k: v for k, v in first.items() if k not in ("recs", "records", "latest_year", "nearest_record",
+                                                          "min_distance_m")},
+            "smallest_ring_m": in_rings[0],
+            "nearest_record_by_ring": {str(r): rings[r]["redlisted"][tid]["nearest_record"] for r in in_rings},
+            "records_by_ring": {str(r): rings[r]["redlisted"][tid]["records"] for r in in_rings},
+            "latest_year_by_ring": {str(r): rings[r]["redlisted"][tid]["latest_year"] for r in in_rings},
+            "records": [{**x, "url": gbif.record_url(x["key"])} for x in ordered[:10]],
+            "record_urls": [gbif.record_url(x["key"]) for x in ordered[:10]],
+        }
         eid = evidence.add(beteckn, "redlisted_species", payload, fetched["source_url"])
-        for r in RINGS:
-            if tid in rings[r]["redlisted"]:
-                rings[r]["redlisted"][tid]["evidence_id"] = eid
+        for r in in_rings:
+            rings[r]["redlisted"][tid]["evidence_id"] = eid
+
+    # Every ring summary is evidence too, including empty rings ("0 records within 250 m")
+    for r in RINGS:
+        rings[r]["evidence_id"] = evidence.add(beteckn, "species_ring", ring_summary(r, rings[r]), fetched["source_url"])
 
     join["name_fallbacks"] = sorted(join.get("name_fallbacks", set()))
     return {
@@ -129,6 +154,7 @@ def build(beteckn: str, lannr_ref: str | None = None) -> dict:
         "felling": {**fell, "evidence_id": e_fell},
         "effort": {**eff, "evidence_id": e_eff},
         "site_radius_m": round(site_radius), "fetched": fetched["total"], "truncated": fetched["truncated"],
+        "fetch_url": fetched["source_url"],
         "join": dict(join), "rings": rings,
     }
 

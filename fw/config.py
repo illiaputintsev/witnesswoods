@@ -31,3 +31,11 @@ USER_AGENT = os.getenv("GBIF_USER_AGENT", "witnesswoods-hackathon/0.1")
 
 FW_ROUTE = os.getenv("FW_ROUTE", "direct")
 FW_MODEL = os.getenv("FW_MODEL", "")
+FW_BUDGET_USD = float(os.getenv("FW_BUDGET_USD", "5"))
+CONDENSE_BASE_URL = os.getenv("CONDENSE_BASE_URL", "")
+
+# USD per million tokens (Anthropic list prices, Oct 2026). Cache write = 5-minute TTL (1.25x input).
+PRICES = {
+    "claude-sonnet-5-5": {"input": 2.00, "output": 10.00, "cache_write": 2.50, "cache_read": 0.20},
+    "claude-opus-5-5": {"input": 4.00, "output": 20.00, "cache_write": 5.00, "cache_read": 0.20},
+}

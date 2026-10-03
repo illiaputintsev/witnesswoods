@@ -46,6 +46,41 @@ def fetch_records(geom_4326, since_year: int = 2016, max_records: int = MAX_RECO
             "wkt": wkt, "source_url": search_url(wkt, since_year)}
 
 
+def records_within(site_4326, radius_m: int = 1000, since_year: int = 2016) -> dict:
+    """Records whose reported position lies within radius_m of the polygon edge (0 = inside).
+
+    Fetches a slightly larger buffer (a superset), then keeps records by exact
+    distance in metres. Rings and observation effort both use this, so they
+    always describe the same geometry and filters.
+    """
+    from shapely.geometry import Point
+    site_3006 = geo.to_3006(site_4326)
+    fetched = fetch_records(geo.buffer_4326(site_4326, radius_m + 50), since_year)
+    rows = []
+    for r in fetched["records"]:
+        if r.get("decimalLongitude") is None:
+            continue
+        d = site_3006.distance(geo.to_3006(Point(r["decimalLongitude"], r["decimalLatitude"])))
+        if d <= radius_m:
+            rows.append((r, d))
+    return {"rows": rows, "fetched": fetched["total"], "truncated": fetched["truncated"],
+            "source_url": fetched["source_url"]}
+
+
+def effort_stats(rows, max_uncertainty_m: float = 1000) -> dict:
+    """Observation effort from (record, distance) rows: records, distinct species, distinct days.
+
+    Only records whose coordinate uncertainty is known and <= max_uncertainty_m count, i.e. exactly
+    the records the 1000 m species ring keeps. Coarse locality records are reported separately.
+    """
+    ok = [(r, d) for r, d in rows if r.get("coordinateUncertaintyInMeters") is not None
+          and r["coordinateUncertaintyInMeters"] <= max_uncertainty_m]
+    return {"records": len(ok),
+            "species": len({r.get("species") for r, _ in ok if r.get("species")}),
+            "days": len({(r.get("eventDate") or "")[:10] for r, _ in ok if r.get("eventDate")}),
+            "coarse_records_excluded": len(rows) - len(ok)}
+
+
 def count(geom_4326, since_year: int = 2016) -> dict:
     """Cheap effort numbers: record count and distinct species (facet), no records fetched."""
     wkt = geo.gbif_wkt(geom_4326)
@@ -53,9 +88,3 @@ def count(geom_4326, since_year: int = 2016) -> dict:
                     {**_base(wkt, since_year), "limit": 0, "facet": "speciesKey", "facetLimit": 5000})
     species = sum(len(f["counts"]) for f in body.get("facets", []))
     return {"records": body["count"], "species": species, "source_url": search_url(wkt, since_year)}
-
-
-def effort_circle(geom_4326, radius_m: int = 1000, since_year: int = 2016) -> dict:
-    """Effort in a circle of radius_m around the polygon's centroid (same definition as the county reference)."""
-    circle = geo.to_4326(geo.to_3006(geom_4326).centroid.buffer(radius_m, quad_segs=8))
-    return {"radius_m": radius_m, **count(circle, since_year)}
