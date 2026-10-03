@@ -682,8 +682,8 @@ function renderChat(d) {
     <div class="chat-sugg">${sugg.map((q) => `<button class="sugg">${esc(q)}</button>`).join("")}</div>
     <form class="chat-form" id="chat-form"><textarea id="chat-in" rows="2" placeholder="Ask about this site, its species, or what to check in the field"></textarea><button type="submit" class="primary">Ask</button></form>`;
   (S.chats[b] || []).forEach((m) => chatBubble(m, d));
-  el.querySelectorAll(".sugg").forEach((x) => (x.onclick = () => sendChat(d, x.textContent)));
-  $("chat-form").onsubmit = (e) => { e.preventDefault(); const q = $("chat-in").value.trim(); if (q) sendChat(d, q); };
+  el.querySelectorAll(".sugg").forEach((x) => (x.onclick = () => { if (!el.classList.contains("busy")) sendChat(d, x.textContent); }));
+  $("chat-form").onsubmit = (e) => { e.preventDefault(); const q = $("chat-in").value.trim(); if (q && !el.classList.contains("busy")) sendChat(d, q); };
   $("chat-in").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("chat-form").requestSubmit(); } };
 }
 function chatBubble(m, d) {
@@ -701,17 +701,31 @@ async function sendChat(d, q) {
   hist.push({ role: "user", content: q });
   chatBubble(hist[hist.length - 1], d);
   $("chat-in").value = "";
-  const wait = chatBubble({ role: "assistant", content: "Looking into it…" }, d);
-  wait.classList.add("pending");
+  const box = $("chat"), t0 = Date.now();
+  box.classList.add("busy");
+  $("chat-in").disabled = true;
+  const wait = document.createElement("div");
+  wait.className = "msg assistant pending";
+  wait.innerHTML = `<div class="typing"><span></span><span></span><span></span></div><span class="elapsed">0 s</span><div class="wait-hint" hidden>Deeper searches can take up to a minute.</div>`;
+  $("chat-log").appendChild(wait);
+  wait.scrollIntoView({ block: "nearest" });
+  const tick = setInterval(() => {
+    const sec = Math.round((Date.now() - t0) / 1000);
+    const el = wait.querySelector(".elapsed"); if (el) el.textContent = `${sec} s`;
+    const h = wait.querySelector(".wait-hint"); if (h && sec >= 15) h.hidden = false;
+  }, 500);
+  const done = () => { clearInterval(tick); box.classList.remove("busy"); $("chat-in").disabled = false; };
   try {
     const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ beteckn: b, messages: hist.map(({ role, content }) => ({ role, content })) }) });
     if (!r.ok) throw new Error(r.status === 503 ? "Chat needs the live backend with an API key." : `Chat failed (${r.status}).`);
     const ans = await r.json();
     hist.push({ role: "assistant", content: ans.text, sources: ans.sources });
-    const done = chatBubble(hist[hist.length - 1], d);
-    wait.replaceWith(done);
+    const answer = chatBubble(hist[hist.length - 1], d);
+    wait.replaceWith(answer);
+    done();
   } catch (e) {
+    done();
     wait.classList.remove("pending"); wait.innerHTML = esc(e.message);
     hist.pop();
   }
