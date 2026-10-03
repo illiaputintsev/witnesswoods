@@ -1,0 +1,236 @@
+{
+ "lannr": "25",
+ "definition": "polygon+1000m_since2016_unc1000_near250_v4",
+ "basis": "this county's own 53 notifications, week 2026-09-28..2026-10-04",
+ "window": [
+  "2026-09-28",
+  "2026-10-04"
+ ],
+ "population": 53,
+ "sample": 53,
+ "seed": null,
+ "radius_m": 1000,
+ "since_year": 2016,
+ "median_records": 33,
+ "p25_records": 5.0,
+ "p75_records": 105.5,
+ "median_species": 16,
+ "median_days": 4,
+ "median_within_250m": 0,
+ "median_inside": 0,
+ "zero_record_sites": 6,
+ "sites": [
+  {
+   "beteckn": "A 40025-2026",
+   "records": 43
+  },
+  {
+   "beteckn": "A 40007-2026",
+   "records": 4635
+  },
+  {
+   "beteckn": "A 40011-2026",
+   "records": 34
+  },
+  {
+   "beteckn": "A 40026-2026",
+   "records": 284
+  },
+  {
+   "beteckn": "A 40137-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40028-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40155-2026",
+   "records": 27
+  },
+  {
+   "beteckn": "A 40136-2026",
+   "records": 331
+  },
+  {
+   "beteckn": "A 40166-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40169-2026",
+   "records": 6
+  },
+  {
+   "beteckn": "A 40014-2026",
+   "records": 84
+  },
+  {
+   "beteckn": "A 40192-2026",
+   "records": 4
+  },
+  {
+   "beteckn": "A 40086-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40152-2026",
+   "records": 15
+  },
+  {
+   "beteckn": "A 40164-2026",
+   "records": 4
+  },
+  {
+   "beteckn": "A 40100-2026",
+   "records": 35
+  },
+  {
+   "beteckn": "A 40003-2026",
+   "records": 105
+  },
+  {
+   "beteckn": "A 40271-2026",
+   "records": 4
+  },
+  {
+   "beteckn": "A 40273-2026",
+   "records": 245
+  },
+  {
+   "beteckn": "A 40346-2026",
+   "records": 18
+  },
+  {
+   "beteckn": "A 40352-2026",
+   "records": 1
+  },
+  {
+   "beteckn": "A 40364-2026",
+   "records": 33
+  },
+  {
+   "beteckn": "A 40398-2026",
+   "records": 2
+  },
+  {
+   "beteckn": "A 40399-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40434-2026",
+   "records": 39
+  },
+  {
+   "beteckn": "A 40469-2026",
+   "records": 21
+  },
+  {
+   "beteckn": "A 40590-2026",
+   "records": 52
+  },
+  {
+   "beteckn": "A 40638-2026",
+   "records": 127
+  },
+  {
+   "beteckn": "A 40652-2026",
+   "records": 34
+  },
+  {
+   "beteckn": "A 40653-2026",
+   "records": 75
+  },
+  {
+   "beteckn": "A 40659-2026",
+   "records": 13
+  },
+  {
+   "beteckn": "A 40666-2026",
+   "records": 698
+  },
+  {
+   "beteckn": "A 40671-2026",
+   "records": 2
+  },
+  {
+   "beteckn": "A 40701-2026",
+   "records": 14
+  },
+  {
+   "beteckn": "A 40708-2026",
+   "records": 9
+  },
+  {
+   "beteckn": "A 40726-2026",
+   "records": 39
+  },
+  {
+   "beteckn": "A 40775-2026",
+   "records": 288
+  },
+  {
+   "beteckn": "A 40779-2026",
+   "records": 22
+  },
+  {
+   "beteckn": "A 40780-2026",
+   "records": 106
+  },
+  {
+   "beteckn": "A 40825-2026",
+   "records": 6
+  },
+  {
+   "beteckn": "A 40849-2026",
+   "records": 140
+  },
+  {
+   "beteckn": "A 40997-2026",
+   "records": 329
+  },
+  {
+   "beteckn": "A 40879-2026",
+   "records": 71
+  },
+  {
+   "beteckn": "A 40929-2026",
+   "records": 72
+  },
+  {
+   "beteckn": "A 40935-2026",
+   "records": 135
+  },
+  {
+   "beteckn": "A 40873-2026",
+   "records": 6
+  },
+  {
+   "beteckn": "A 40960-2026",
+   "records": 2
+  },
+  {
+   "beteckn": "A 40993-2026",
+   "records": 14
+  },
+  {
+   "beteckn": "A 40984-2026",
+   "records": 348
+  },
+  {
+   "beteckn": "A 40980-2026",
+   "records": 19
+  },
+  {
+   "beteckn": "A 41001-2026",
+   "records": 55
+  },
+  {
+   "beteckn": "A 40978-2026",
+   "records": 120
+  },
+  {
+   "beteckn": "A 41032-2026",
+   "records": 0
+  }
+ ]
+}

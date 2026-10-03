@@ -1,0 +1,136 @@
+{
+ "lannr": "03",
+ "definition": "polygon+1000m_since2016_unc1000_near250_v4",
+ "basis": "this county's own 28 notifications, week 2026-09-28..2026-10-04",
+ "window": [
+  "2026-09-28",
+  "2026-10-04"
+ ],
+ "population": 28,
+ "sample": 28,
+ "seed": null,
+ "radius_m": 1000,
+ "since_year": 2016,
+ "median_records": 113.5,
+ "p25_records": 7.5,
+ "p75_records": 429.5,
+ "median_species": 39.0,
+ "median_days": 18.0,
+ "median_within_250m": 0.0,
+ "median_inside": 0.0,
+ "zero_record_sites": 1,
+ "sites": [
+  {
+   "beteckn": "A 40222-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40219-2026",
+   "records": 144
+  },
+  {
+   "beteckn": "A 40038-2026",
+   "records": 3193
+  },
+  {
+   "beteckn": "A 40057-2026",
+   "records": 2167
+  },
+  {
+   "beteckn": "A 40106-2026",
+   "records": 12
+  },
+  {
+   "beteckn": "A 39978-2026",
+   "records": 28
+  },
+  {
+   "beteckn": "A 40376-2026",
+   "records": 1211
+  },
+  {
+   "beteckn": "A 40403-2026",
+   "records": 4838
+  },
+  {
+   "beteckn": "A 40410-2026",
+   "records": 49
+  },
+  {
+   "beteckn": "A 40446-2026",
+   "records": 199
+  },
+  {
+   "beteckn": "A 40476-2026",
+   "records": 684
+  },
+  {
+   "beteckn": "A 40506-2026",
+   "records": 146
+  },
+  {
+   "beteckn": "A 40589-2026",
+   "records": 251
+  },
+  {
+   "beteckn": "A 40610-2026",
+   "records": 1
+  },
+  {
+   "beteckn": "A 40591-2026",
+   "records": 225
+  },
+  {
+   "beteckn": "A 40491-2026",
+   "records": 489
+  },
+  {
+   "beteckn": "A 40478-2026",
+   "records": 641
+  },
+  {
+   "beteckn": "A 40597-2026",
+   "records": 83
+  },
+  {
+   "beteckn": "A 40651-2026",
+   "records": 242
+  },
+  {
+   "beteckn": "A 40657-2026",
+   "records": 223
+  },
+  {
+   "beteckn": "A 40741-2026",
+   "records": 1
+  },
+  {
+   "beteckn": "A 40742-2026",
+   "records": 1
+  },
+  {
+   "beteckn": "A 40743-2026",
+   "records": 2
+  },
+  {
+   "beteckn": "A 40746-2026",
+   "records": 1
+  },
+  {
+   "beteckn": "A 40894-2026",
+   "records": 61
+  },
+  {
+   "beteckn": "A 41016-2026",
+   "records": 6
+  },
+  {
+   "beteckn": "A 40903-2026",
+   "records": 47
+  },
+  {
+   "beteckn": "A 40994-2026",
+   "records": 29
+  }
+ ]
+}

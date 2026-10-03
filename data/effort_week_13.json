@@ -1,0 +1,124 @@
+{
+ "lannr": "13",
+ "definition": "polygon+1000m_since2016_unc1000_near250_v4",
+ "basis": "this county's own 25 notifications, week 2026-09-28..2026-10-04",
+ "window": [
+  "2026-09-28",
+  "2026-10-04"
+ ],
+ "population": 25,
+ "sample": 25,
+ "seed": null,
+ "radius_m": 1000,
+ "since_year": 2016,
+ "median_records": 98,
+ "p25_records": 41.5,
+ "p75_records": 206.0,
+ "median_species": 49,
+ "median_days": 26,
+ "median_within_250m": 1,
+ "median_inside": 0,
+ "zero_record_sites": 0,
+ "sites": [
+  {
+   "beteckn": "A 40140-2026",
+   "records": 4
+  },
+  {
+   "beteckn": "A 40161-2026",
+   "records": 31
+  },
+  {
+   "beteckn": "A 40193-2026",
+   "records": 199
+  },
+  {
+   "beteckn": "A 39977-2026",
+   "records": 95
+  },
+  {
+   "beteckn": "A 40093-2026",
+   "records": 494
+  },
+  {
+   "beteckn": "A 40147-2026",
+   "records": 63
+  },
+  {
+   "beteckn": "A 40171-2026",
+   "records": 19
+  },
+  {
+   "beteckn": "A 40374-2026",
+   "records": 1
+  },
+  {
+   "beteckn": "A 40496-2026",
+   "records": 121
+  },
+  {
+   "beteckn": "A 40510-2026",
+   "records": 115
+  },
+  {
+   "beteckn": "A 40512-2026",
+   "records": 115
+  },
+  {
+   "beteckn": "A 40514-2026",
+   "records": 87
+  },
+  {
+   "beteckn": "A 40461-2026",
+   "records": 213
+  },
+  {
+   "beteckn": "A 40488-2026",
+   "records": 363
+  },
+  {
+   "beteckn": "A 40511-2026",
+   "records": 115
+  },
+  {
+   "beteckn": "A 40568-2026",
+   "records": 98
+  },
+  {
+   "beteckn": "A 40636-2026",
+   "records": 3
+  },
+  {
+   "beteckn": "A 40681-2026",
+   "records": 636
+  },
+  {
+   "beteckn": "A 40682-2026",
+   "records": 2295
+  },
+  {
+   "beteckn": "A 40718-2026",
+   "records": 1
+  },
+  {
+   "beteckn": "A 40987-2026",
+   "records": 115
+  },
+  {
+   "beteckn": "A 40870-2026",
+   "records": 69
+  },
+  {
+   "beteckn": "A 40942-2026",
+   "records": 87
+  },
+  {
+   "beteckn": "A 41023-2026",
+   "records": 511
+  },
+  {
+   "beteckn": "A 40862-2026",
+   "records": 52
+  }
+ ]
+}

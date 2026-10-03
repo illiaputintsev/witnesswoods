@@ -52,7 +52,11 @@ def _run_live(beteckn: str) -> None:
         prof = tools._profile(beteckn)
         events = [e for e in bwd.log_events() if e.get("type") == "tool_call" and e.get("notification") == beteckn
                   and e["run_id"] == d["run_id"]]
+        bwd.load_photos()
         payload = bwd.site_payload(beteckn, d, prof, events)
+        lst = config.OUT / "national_week.json"
+        lannr = next((x["lannr"] for x in json.loads(lst.read_text()) if x["beteckn"] == beteckn), None) if lst.exists() else None
+        payload["rubric_status"] = bwd.RUBRIC_STATUS.get(lannr, "untested") if lannr else None
         (bwd.WEB / "sites" / f"{beteckn.replace(' ', '_')}.json").write_text(json.dumps(payload, ensure_ascii=False))
         _live.update(status="done", priority=d["priority"])
     except Exception as e:  # the UI falls back to replay quietly

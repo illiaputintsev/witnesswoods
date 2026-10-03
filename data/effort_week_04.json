@@ -1,0 +1,72 @@
+{
+ "lannr": "04",
+ "definition": "polygon+1000m_since2016_unc1000_near250_v4",
+ "basis": "this county's own 12 notifications, week 2026-09-28..2026-10-04",
+ "window": [
+  "2026-09-28",
+  "2026-10-04"
+ ],
+ "population": 12,
+ "sample": 12,
+ "seed": null,
+ "radius_m": 1000,
+ "since_year": 2016,
+ "median_records": 724.0,
+ "p25_records": 436.5,
+ "p75_records": 1036.0,
+ "median_species": 156.5,
+ "median_days": 105.5,
+ "median_within_250m": 12.0,
+ "median_inside": 0.0,
+ "zero_record_sites": 0,
+ "sites": [
+  {
+   "beteckn": "A 40216-2026",
+   "records": 705
+  },
+  {
+   "beteckn": "A 40145-2026",
+   "records": 417
+  },
+  {
+   "beteckn": "A 40160-2026",
+   "records": 707
+  },
+  {
+   "beteckn": "A 40126-2026",
+   "records": 495
+  },
+  {
+   "beteckn": "A 40133-2026",
+   "records": 741
+  },
+  {
+   "beteckn": "A 40333-2026",
+   "records": 839
+  },
+  {
+   "beteckn": "A 40619-2026",
+   "records": 302
+  },
+  {
+   "beteckn": "A 40494-2026",
+   "records": 1077
+  },
+  {
+   "beteckn": "A 40600-2026",
+   "records": 913
+  },
+  {
+   "beteckn": "A 40567-2026",
+   "records": 202
+  },
+  {
+   "beteckn": "A 40663-2026",
+   "records": 2861
+  },
+  {
+   "beteckn": "A 40844-2026",
+   "records": 3426
+  }
+ ]
+}

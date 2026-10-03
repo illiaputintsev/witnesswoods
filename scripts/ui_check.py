@@ -29,7 +29,12 @@ def wait_ready(page, settle=1.5):
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     week = json.loads((ROOT / "web" / "data" / "week.json").read_text())
-    high = next(s["beteckn"] for s in week["sites"] if s["priority"] == "HIGH").replace(" ", "_")
+    def n_photos(b):
+        f = ROOT / "web" / "data" / "sites" / f"{b.replace(' ', '_')}.json"
+        d = json.loads(f.read_text()) if f.exists() else {}
+        return sum(1 for x in d.get("species_lines", []) if x.get("photo")) if d.get("kind", "agent") == "agent" else -1
+    highs = [s["beteckn"] for s in week["sites"] if s["priority"] == "HIGH"]
+    high = max(highs, key=n_photos).replace(" ", "_")  # the HIGH agent dossier with the most species photos
     report = {"high_site": high, "views": [], "console_errors": {}}
     with sync_playwright() as p:
         browser = p.chromium.launch(channel="chrome", headless=True, args=["--use-angle=metal", "--enable-gpu"])

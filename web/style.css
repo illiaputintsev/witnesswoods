@@ -82,6 +82,7 @@ kbd { background: var(--line); border-radius: 4px; padding: 0 5px; font-size: 11
 .headline-overlay { background: linear-gradient(rgba(13,20,17,.62), rgba(13,20,17,0)); padding: 8px 12px 16px; border-radius: 8px; position: absolute; z-index: 4; top: 10px; left: calc(var(--feed-w) + 36px); right: 36px; font-size: 24px; font-weight: 600; line-height: 1.25; text-shadow: 0 2px 14px rgba(0,0,0,0.85); pointer-events: none; transition: opacity 0.6s; max-width: 820px; }
 .headline-overlay .sub { display: block; font-size: 13px; font-weight: 400; color: var(--moss-grey); margin-top: 4px; }
 body.dossier-open .headline-overlay, body.replaying .headline-overlay { opacity: 0; }
+body.has-counties .headline-overlay { right: 436px; font-size: 22px; }
 
 /* ---------- legend ---------- */
 .legend { position: absolute; z-index: 4; left: calc(var(--feed-w) + 24px); bottom: 12px; border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--moss-grey); }
@@ -106,6 +107,28 @@ body.dossier-open .legend .legend-note.sp { display: block; }
 .pt-mobile::after { content: ""; position: absolute; left: -3px; top: 4px; border-left: 3px solid transparent; border-right: 3px solid transparent; border-bottom: 5px solid var(--panel); }
 .pt-elig { border-radius: 50%; background: var(--lingon); }
 .pt-other { border-radius: 50%; background: var(--cloudberry); }
+.counties { position: absolute; z-index: 5; top: 12px; right: 12px; width: 400px; max-height: calc(100% - 24px); overflow-y: auto; border-radius: 10px; }
+.cty-note { padding: 8px 14px 4px; font-size: 12.5px; color: var(--moss-grey); }
+.cty { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cty th { text-align: right; font-weight: 600; color: var(--moss-grey); font-size: 11px; padding: 6px 8px; }
+.cty th:first-child, .cty td:first-child { text-align: left; padding-left: 14px; }
+.cty td { text-align: right; padding: 4px 8px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.cty tbody tr { cursor: pointer; }
+.cty tbody tr:hover { background: rgba(207,227,200,0.07); }
+.cty .h { color: var(--lingon); } .cty .m { color: var(--cloudberry); } .cty .u { color: var(--fog); }
+.cty .st { font-size: 10px; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--reindeer-moss); }
+.kind { margin: 10px 0 4px; padding: 7px 10px; border-radius: 6px; font-size: 13px; }
+.kind.agent { background: rgba(207,227,200,0.08); border: 1px solid rgba(207,227,200,0.35); }
+.kind.rule { background: rgba(140,154,160,0.12); border: 1px dashed var(--fog); }
+.kind-tag { font-size: 10px; border: 1px solid var(--reindeer-moss); color: var(--reindeer-moss); border-radius: 4px; padding: 0 4px; vertical-align: 1px; }
+.kind-tag.rule { border-color: var(--fog); color: var(--fog); }
+.live.primary-live { background: var(--reindeer-moss); color: var(--spruce-night); font-weight: 600; border: 0; }
+.photos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 8px 0 10px; }
+.ph { margin: 0; background: rgba(13,20,17,0.6); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.ph img { width: 100%; height: 96px; object-fit: cover; display: block; }
+.ph figcaption { padding: 5px 7px; font-size: 12px; line-height: 1.3; }
+.ph figcaption span { display: block; color: var(--moss-grey); font-size: 10.5px; margin-top: 2px; line-height: 1.25; }
+.ph img { height: 110px; }
 .tile-note { position: absolute; z-index: 4; right: 12px; bottom: 12px; font-size: 11px; color: var(--moss-grey); background: var(--panel); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line); }
 
 /* ---------- dossier ---------- */
@@ -177,6 +200,8 @@ span.chip { color: var(--moss-grey); }
 .maplibregl-popup-close-button { color: var(--moss-grey); }
 .maplibregl-ctrl-attrib { background: rgba(13,20,17,0.75) !important; color: var(--moss-grey); font-size: 10px; }
 .maplibregl-ctrl-attrib a { color: var(--moss-grey); }
+.pulse { width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--c); pointer-events: none; animation: pulse 1s ease-out forwards; }
+@keyframes pulse { from { transform: scale(0.6); opacity: 1; } to { transform: scale(3.2); opacity: 0; } }
 .ring-label { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--snow); background: rgba(13,20,17,0.35); padding: 0 4px; border-radius: 3px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 .ring-label.on { opacity: 0.9; }
 
@@ -234,6 +259,10 @@ span.chip { color: var(--moss-grey); }
   .headline-overlay { font-size: 21px; }
 }
 @media (max-height: 760px) {
+  .cty td { padding: 2px 8px; font-size: 12px; }
+  .cty th { padding: 4px 8px; }
+  .cty-note { padding: 6px 14px 2px; }
+  .counties { max-height: calc(100% - 40px); }
   .ev-big .num { font-size: 48px; }
   .ev-inner h1 { font-size: 20px; }
   .card svg { max-height: 150px; }

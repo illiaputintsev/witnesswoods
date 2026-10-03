@@ -19,7 +19,11 @@ from fw.profile import RINGS  # noqa: E402
 
 WEB = config.ROOT / "web" / "data"
 WINDOW_DAYS = 42
-COUNTY_NAMES = {"20": "Dalarna", "21": "Gävleborg", "17": "Värmland"}
+COUNTY_NAMES = {"01": "Stockholm", "03": "Uppsala", "04": "Södermanland", "05": "Östergötland", "06": "Jönköping",
+                "07": "Kronoberg", "08": "Kalmar", "09": "Gotland", "10": "Blekinge", "12": "Skåne", "13": "Halland",
+                "14": "Västra Götaland", "17": "Värmland", "18": "Örebro", "19": "Västmanland", "20": "Dalarna",
+                "21": "Gävleborg", "22": "Västernorrland", "23": "Jämtland", "24": "Västerbotten", "25": "Norrbotten"}
+RUBRIC_STATUS = {"20": "tuned", "21": "tested", "17": "tested"}  # everywhere else the rubric is applied untested
 EN_TYPE = {"Föryngringsavverkning": "regeneration felling"}
 EN_STATUS = {"Anmält för avverkning": "notified for felling"}
 # Red List organism groups (Organismgrupp1) in plain English
@@ -32,7 +36,7 @@ EN_GROUP = {"Lavar": "lichen", "Storsvampar": "fungus", "Mossor": "moss", "Kärl
 CAT_ORDER = {"CR": 0, "EN": 1, "VU": 2, "NT": 3}
 
 
-def _round_coords(geom: dict, nd: int = 6) -> dict:
+def _round_coords(geom: dict, nd: int = 5) -> dict:
     def r(c):
         return [round(c[0], nd), round(c[1], nd)] if isinstance(c[0], (int, float)) else [r(x) for x in c]
     return {"type": geom["type"], "coordinates": r(geom["coordinates"])}
@@ -171,7 +175,7 @@ def feed_text(e: dict, prof: dict, dossier: dict | None) -> str:
 def site_payload(b: str, d: dict, prof: dict, events: list[dict]) -> dict:
     n = skogs.get_notification(b)
     site = geo.from_geojson(n["geometry"])
-    rings = [{"m": 0, "geometry": _gj(site)}] + [{"m": r, "geometry": _gj(geo.buffer_4326(site, r, 5), 0.00005)}
+    rings = [{"m": 0, "geometry": _gj(site)}] + [{"m": r, "geometry": _gj(geo.buffer_4326(site, r, 5), 0.0001)}
                                                  for r in RINGS[1:]]
     coords = {r["key"]: (r["decimalLongitude"], r["decimalLatitude"]) for r, _ in gbif.records_within(site, 1000)["rows"]}
     pts = []
@@ -186,7 +190,7 @@ def site_payload(b: str, d: dict, prof: dict, events: list[dict]) -> dict:
                         "properties": {"key": rec["key"], "name": sp["scientific_name"], "swedish": sp["swedish_name"],
                                        "category": sp["category"], "eligible": tools.rubric._eligible(sp),
                                        "mobility": sp["mobility"], "unc_m": rec["unc_m"], "year": rec["year"],
-                                       "dist_m": rec["dist_m"], "url": gbif.record_url(rec["key"]),
+                                       "dist_m": rec["dist_m"],
                                        "evidence_id": sp.get("evidence_id")}})
     cited = {i for r in d["reasons"] + d["contradictions"] for i in r["evidence_ids"]}
     cited |= set(d["rubric_hint"]["evidence_ids"]) | set((d.get("override_reason") or {}).get("evidence_ids", []))
@@ -203,6 +207,7 @@ def site_payload(b: str, d: dict, prof: dict, events: list[dict]) -> dict:
     # display-only tidying of recorded text: "66.0" -> "66", stray trailing quote; the dossier files stay as recorded
     hint = {**d["rubric_hint"], "rule": re.sub(r"(\d)\.0\b", r"\1", d["rubric_hint"]["rule"])}
     return {
+        "kind": "agent",
         "beteckn": b, "priority": d["priority"], "rubric_hint": hint, "override_reason": d.get("override_reason"),
         "forced": d.get("forced"), "notification": d["notification"], "window_closes": window_close(d["notification"]["inkomdatum"]),
         "reasons": d["reasons"], "contradictions": d["contradictions"], "uncertainties": d["uncertainties"],
@@ -211,9 +216,42 @@ def site_payload(b: str, d: dict, prof: dict, events: list[dict]) -> dict:
         "evidence": ev_index, "path": path,
         "reason_kinds": [sorted({kinds.get(i, "?") for i in r["evidence_ids"]}) for r in d["reasons"]],
         "species_lines": species_lines(cited, prof), "context": context_block(ctx),
-        "geometry": {"site": _gj(site), "rings": rings, "species": {"type": "FeatureCollection", "features": pts},
+        "geometry": {"site": _gj(site), "rings": rings, "species": {"type": "FeatureCollection", "features": cap_points(pts)},
                      "fellings": {"type": "FeatureCollection", "features": felling_features(site)}},
     }
+
+
+PHOTOS = {}
+PER_SPECIES, MAX_POINTS = 5, 200
+
+
+def cap_points(pts: list[dict]) -> list[dict]:
+    """Map points only: the 8 nearest records per species, at most 400 per site (eligible first)."""
+    by = defaultdict(list)
+    for f in pts:
+        by[f["properties"]["name"]].append(f)
+    kept = [f for fs in by.values() for f in sorted(fs, key=lambda f: f["properties"]["dist_m"])[:PER_SPECIES]]
+    kept.sort(key=lambda f: (not f["properties"]["eligible"], CAT_ORDER.get(f["properties"]["category"], 9),
+                             f["properties"]["dist_m"]))
+    return kept[:MAX_POINTS]
+
+
+def load_photos() -> None:
+    p = WEB / "photos.json"
+    if p.exists():
+        PHOTOS.update({k: v for k, v in json.loads(p.read_text()).items() if v})
+
+
+def photo_entry(name: str) -> dict | None:
+    """Caption in one fixed format: 'Reference photo of the species, not from this site. © author, licence, source.'"""
+    ph = PHOTOS.get(name)
+    if not ph:
+        return None
+    a = ph.get("author", "")
+    m = re.search(r"\(c\)\s*([^,(]+)", a) or re.search(r"©\s*([^,(]+)", a)
+    author = (m.group(1) if m else a).strip() or "unknown author"
+    return {"file": ph["file"], "source_url": ph["source_url"],
+            "caption": f"Reference photo of the species, not from this site. © {author}, {ph['licence']}, {ph['source']}."}
 
 
 def species_lines(cited: set, prof: dict) -> list[dict]:
@@ -232,7 +270,8 @@ def species_lines(cited: set, prof: dict) -> list[dict]:
         out.append({"text": f"{sw + ', ' if sw else ''}{grp} ({p['scientific_name']}), {p['category']}, {near['dist_m']} m",
                     "swedish": sw, "group": grp, "scientific": p["scientific_name"], "category": p["category"],
                     "dist_m": near["dist_m"], "unc_m": near["unc_m"], "year": near["year"], "eligible": eligible,
-                    "mobility": p["mobility"], "evidence_id": e["id"], "url": (p.get("record_urls") or [None])[0]})
+                    "mobility": p["mobility"], "evidence_id": e["id"], "url": (p.get("record_urls") or [None])[0],
+                    "photo": photo_entry(p["scientific_name"])})
     out.sort(key=lambda x: (not x["eligible"], CAT_ORDER[x["category"]], x["dist_m"]))
     return out
 
@@ -255,6 +294,72 @@ def context_block(c: dict) -> dict:
 def week_share(sites: list[dict]) -> dict:
     none250 = sum(tools._profile(s["beteckn"])["rings"][250]["records"] == 0 for s in sites)
     return {"n": len(sites), "no_record_within_250m": none250, "share_no_record_within_250m": round(none250 / len(sites), 4)}
+
+
+RULE_NOT_ESTABLISHED = [
+    "No agent has reviewed this site: this is the deterministic rubric applied to the evidence profile.",
+    "Absence of records is not absence of species.",
+    "A species record shows the species was recorded nearby, not that it occupies the site today.",
+    "Whether the stand has high ecological value, or whether felling is legal or appropriate.",
+]
+
+
+def ref_basis(lannr: str, eff: dict) -> str:
+    from fw import effort as _effort
+    return _effort.county_reference(lannr).get("basis") or eff["reference"]
+
+
+def ref_word(lannr: str) -> str:
+    from fw import effort as _effort
+    return "national week median" if str(_effort.county_reference(lannr).get("basis", "")).startswith("national") else "county median"
+
+
+def rule_payload(b: str, prof: dict, lannr: str) -> dict:
+    """Rule-only profile for a site no agent has investigated: the deterministic rubric, nothing more."""
+    from fw import rubric
+    n = prof["notification"]
+    site = geo.from_geojson(skogs.get_notification(b)["geometry"])
+    h = rubric.hint(prof)
+    hint = {**h, "rule": re.sub(r"(\d)\.0\b", r"\1", h["rule"])}
+    wide = prof["rings"][1000]["redlisted"].values()
+    sp_ids = {s["evidence_id"] for s in sorted(wide, key=lambda s: (not tools.rubric._eligible(s), CAT_ORDER.get(s["category"], 9),
+                                                                     s["min_distance_m"]))[:12]
+              if s["category"] in CAT_ORDER}
+    rows = gbif.records_within(site, 1000)["rows"]
+    coords = {r["key"]: (r["decimalLongitude"], r["decimalLatitude"]) for r, _ in rows}
+    pts = []
+    for sp in wide:
+        if sp["category"] not in CAT_ORDER:
+            continue
+        for rec in sp["recs"]:
+            if rec["key"] in coords:
+                lon, lat = coords[rec["key"]]
+                pts.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": [round(lon, 6), round(lat, 6)]},
+                            "properties": {"key": rec["key"], "name": sp["scientific_name"], "swedish": sp["swedish_name"],
+                                           "category": sp["category"], "eligible": tools.rubric._eligible(sp),
+                                           "mobility": sp["mobility"], "unc_m": rec["unc_m"], "year": rec["year"],
+                                           "dist_m": rec["dist_m"],
+                                           "evidence_id": sp.get("evidence_id")}})
+    eff = prof["effort"]
+    ns = eff["near_site"]
+    rings = [{"m": 0, "geometry": _gj(site)}] + [{"m": r, "geometry": _gj(geo.buffer_4326(site, r, 5), 0.0001)} for r in RINGS[1:]]
+    return {
+        "kind": "rule", "beteckn": b, "priority": h["priority"], "rubric_hint": hint, "override_reason": None,
+        "forced": None, "notification": {k: n[k] for k in ("kommun", "lan", "avverktyp", "skogstyp", "inkomdatum",
+                                                            "anmald_ha", "polygon_ha", "status", "centroid")},
+        "window_closes": window_close(n["inkomdatum"]),
+        "reasons": [], "contradictions": [], "uncertainties": [
+            f"Recording effort: {eff['records']} records within 1000 m ({ref_word(lannr)} {eff['county_median']:g}); "
+            f"{ns['within_250m']['records']} within 250 m (median {ns['county_median_within_250m']:g}).",
+            f"Effort reference: {ref_basis(lannr, eff)}."],
+        "not_established": RULE_NOT_ESTABLISHED,
+        "next_action": "Run the agent on this site for a full dossier before deciding on a field check.",
+        "counts": tools._rank_counts(prof), "rubric_status": RUBRIC_STATUS.get(lannr, "untested"),
+        "evidence": evidence_index(set(h["evidence_ids"]) | sp_ids), "path": [], "reason_kinds": [],
+        "species_lines": species_lines(sp_ids, prof), "context": None,
+        "geometry": {"site": _gj(site), "rings": rings, "species": {"type": "FeatureCollection", "features": cap_points(pts)},
+                     "fellings": {"type": "FeatureCollection", "features": []}},
+    }
 
 
 def zero_share(lannr: str) -> dict | None:
@@ -324,8 +429,8 @@ def evidence_test() -> dict:
 
 
 def county_outline(lannr: str) -> dict | None:
-    """County outline for the no-tiles fallback, from OpenStreetMap Nominatim (cached to disk)."""
-    name = {"20": "Dalarnas län"}.get(lannr)
+    """Outline for the no-tiles fallback, from OpenStreetMap Nominatim (cached to disk)."""
+    name = {"20": "Dalarnas län", "SE": "Sverige"}.get(lannr)
     if not name:
         return None
     try:
@@ -367,7 +472,7 @@ def main() -> None:
             continue
         d, prof = dossiers[b], tools._profile(b)
         payload = site_payload(b, d, prof, by_site[b])
-        (WEB / "sites" / f"{b.replace(' ', '_')}.json").write_text(json.dumps(payload, ensure_ascii=False))
+        (WEB / "sites" / f"{b.replace(' ', '_')}.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
         sites.append({"beteckn": b, "kommun": n["kommun"], "area_ha": d["notification"]["polygon_ha"],
                       "received": d["notification"]["inkomdatum"], "window_closes": payload["window_closes"],
                       "priority": d["priority"], "rubric_hint": d["rubric_hint"]["priority"],
@@ -385,7 +490,7 @@ def main() -> None:
             "notified": len(notes), "investigated": len(sites), "counts": dict(counts),
             "overrides": sum(s["overridden"] for s in sites), "window_days": WINDOW_DAYS,
             "sites": sorted(sites, key=lambda s: s["rank"])}
-    (WEB / "week.json").write_text(json.dumps(week, ensure_ascii=False))
+    (WEB / "week.json").write_text(json.dumps(week, ensure_ascii=False, separators=(",", ":")))
     (WEB / "replay.json").write_text(json.dumps({"steps": replay, "sites": len(sites)}, ensure_ascii=False))
     (WEB / "evidence_test.json").write_text(json.dumps(evidence_test(), ensure_ascii=False, indent=1))
     shares = [s for s in (zero_share(l) for l in ("21", "17")) if s]
@@ -403,5 +508,87 @@ def main() -> None:
     print(f"web/data: {len(sites)} sites, {len(replay)} replay steps, counts {dict(counts)}")
 
 
+def main_national() -> None:
+    """All of Sweden this week: agent dossiers where an agent ran, rule-only profiles everywhere else."""
+    load_photos()
+    (WEB / "sites").mkdir(parents=True, exist_ok=True)
+    listing = json.loads((config.OUT / "national_week.json").read_text())
+    ids = [x["beteckn"] for x in listing]
+    lan = {x["beteckn"]: x["lannr"] for x in listing}
+    dossiers = {d["beteckn"]: d for d in rank.load_dossiers(ids)}
+    by_site = defaultdict(list)
+    for e in log_events():
+        if e.get("type") == "tool_call":
+            d = dossiers.get(e.get("notification"))
+            if d and e["run_id"] == d.get("run_id"):
+                by_site[e["notification"]].append(e)
+    sites, replay, keyed = [], [], []
+    for i, b in enumerate(ids, 1):
+        prof = tools._profile(b)
+        if b in dossiers:
+            d = dossiers[b]
+            payload = site_payload(b, d, prof, by_site[b])
+            payload["rubric_status"] = RUBRIC_STATUS.get(lan[b], "untested")
+            head = headline(d)
+            for e in by_site[b]:
+                replay.append({"ts": e["ts"], "run_id": e["run_id"], "beteckn": b, "tool": e["tool"],
+                               "error": e.get("error", False), "text": feed_text(e, prof, d),
+                               "final": e["tool"] == "record_finding" and not e.get("error")})
+        else:
+            payload = rule_payload(b, prof, lan[b])
+            head = payload["rubric_hint"]["rule"][0].upper() + payload["rubric_hint"]["rule"][1:]
+        (WEB / "sites" / f"{b.replace(' ', '_')}.json").write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+        n = payload["notification"]
+        keyed.append((rank.key({"priority": payload["priority"], "counts": payload["counts"]}), b))
+        sites.append({"beteckn": b, "lannr": lan[b], "county": COUNTY_NAMES.get(lan[b], lan[b]), "kommun": n["kommun"],
+                      "area_ha": n["polygon_ha"], "received": n["inkomdatum"], "window_closes": payload["window_closes"],
+                      "priority": payload["priority"], "rubric_hint": payload["rubric_hint"]["priority"], "kind": payload["kind"],
+                      "overridden": payload["priority"] != payload["rubric_hint"]["priority"], "headline": head,
+                      "centroid": n["centroid"], "polygon": _gj(geo.from_geojson(payload["geometry"]["site"]), 0.0001)})
+        if i % 100 == 0:
+            print(f"built {i}/{len(ids)}", flush=True)
+    order = {b: r for r, (_, b) in enumerate(sorted(keyed), 1)}
+    for x in sites:
+        x["rank"] = order[x["beteckn"]]
+    sites.sort(key=lambda x: x["rank"])
+    # parallel agent processes interleave in time: replay one site at a time, in order of each site's first step
+    first = {}
+    for r in replay:
+        first[r["beteckn"]] = min(first.get(r["beteckn"], r["ts"]), r["ts"])
+    replay.sort(key=lambda r: (first[r["beteckn"]], r["beteckn"], r["ts"]))
+    counts = Counter(x["priority"] for x in sites)
+    counties = []
+    for l in sorted({x["lannr"] for x in sites}, key=lambda l: -sum(x["lannr"] == l for x in sites)):
+        cs = [x for x in sites if x["lannr"] == l]
+        ref = tools._profile(cs[0]["beteckn"])["effort"]
+        counties.append({"lannr": l, "county": COUNTY_NAMES.get(l, l), "notified": len(cs),
+                         "counts": dict(Counter(x["priority"] for x in cs)), "agent": sum(x["kind"] == "agent" for x in cs),
+                         "rubric_status": RUBRIC_STATUS.get(l, "untested"), "effort_median": ref["county_median"],
+                         "effort_reference": ref["reference"]})
+    week = {"scope": "Sweden", "county": "Sweden", "received_from": "2026-09-28", "received_to": "2026-10-03",
+            "notified": len(ids), "investigated": sum(x["kind"] == "agent" for x in sites), "counts": dict(counts),
+            "agent_dossiers": sum(x["kind"] == "agent" for x in sites), "overrides": sum(x["overridden"] for x in sites),
+            "window_days": WINDOW_DAYS, "counties": counties,
+            "rubric_note": "Rubric tuned on Dalarna, tested on Gävleborg and Värmland; elsewhere applied untested.",
+            "sites": sites}
+    (WEB / "week.json").write_text(json.dumps(week, ensure_ascii=False, separators=(",", ":")))
+    (WEB / "replay.json").write_text(json.dumps({"steps": replay, "sites": len({r["beteckn"] for r in replay})}, ensure_ascii=False))
+    (WEB / "evidence_test.json").write_text(json.dumps(evidence_test(), ensure_ascii=False, indent=1))
+    none250 = sum(tools._profile(b)["rings"][250]["records"] == 0 for b in ids)
+    shares = [z for z in (zero_share(l) for l in ("21", "17")) if z]
+    (WEB / "stats.json").write_text(json.dumps({
+        "week": {"county": "Sweden", "received_from": "2026-09-28", "received_to": "2026-10-03", "n": len(ids),
+                 "no_record_within_250m": none250, "share_no_record_within_250m": round(none250 / len(ids), 4)},
+        "zero_record_share": shares,
+        "headline": (f"{none250} of the {len(ids)} sites notified for regeneration felling in Sweden this week "
+                     f"({round(100 * none250 / len(ids))}%) have no species record within 250 m since 2016.")},
+        ensure_ascii=False, indent=1))
+    cond = config.OUT / "condense.json"
+    (WEB / "condense.json").write_text(cond.read_text() if cond.exists() else json.dumps({"status": "pending"}))
+    (WEB / "county.json").write_text(json.dumps(county_outline("SE") or {}, ensure_ascii=False))
+    print(f"web/data (Sweden): {len(sites)} sites, {week['agent_dossiers']} agent dossiers, {len(replay)} replay steps, "
+          f"counts {dict(counts)}")
+
+
 if __name__ == "__main__":
-    main()
+    main_national() if "--national" in sys.argv else main()

@@ -1,0 +1,400 @@
+{
+ "lannr": "22",
+ "definition": "polygon+1000m_since2016_unc1000_near250_v4",
+ "basis": "this county's own 94 notifications, week 2026-09-28..2026-10-04",
+ "window": [
+  "2026-09-28",
+  "2026-10-04"
+ ],
+ "population": 94,
+ "sample": 94,
+ "seed": null,
+ "radius_m": 1000,
+ "since_year": 2016,
+ "median_records": 14.0,
+ "p25_records": 1.0,
+ "p75_records": 63.25,
+ "median_species": 9.0,
+ "median_days": 4.0,
+ "median_within_250m": 0.0,
+ "median_inside": 0.0,
+ "zero_record_sites": 20,
+ "sites": [
+  {
+   "beteckn": "A 39994-2026",
+   "records": 41
+  },
+  {
+   "beteckn": "A 39984-2026",
+   "records": 17
+  },
+  {
+   "beteckn": "A 39981-2026",
+   "records": 1
+  },
+  {
+   "beteckn": "A 39991-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40047-2026",
+   "records": 5
+  },
+  {
+   "beteckn": "A 40138-2026",
+   "records": 75
+  },
+  {
+   "beteckn": "A 40195-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40165-2026",
+   "records": 229
+  },
+  {
+   "beteckn": "A 40198-2026",
+   "records": 176
+  },
+  {
+   "beteckn": "A 40048-2026",
+   "records": 2
+  },
+  {
+   "beteckn": "A 40096-2026",
+   "records": 32
+  },
+  {
+   "beteckn": "A 39992-2026",
+   "records": 21
+  },
+  {
+   "beteckn": "A 40244-2026",
+   "records": 40
+  },
+  {
+   "beteckn": "A 40245-2026",
+   "records": 13
+  },
+  {
+   "beteckn": "A 40255-2026",
+   "records": 2
+  },
+  {
+   "beteckn": "A 40275-2026",
+   "records": 20
+  },
+  {
+   "beteckn": "A 40300-2026",
+   "records": 2
+  },
+  {
+   "beteckn": "A 40303-2026",
+   "records": 334
+  },
+  {
+   "beteckn": "A 40312-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40323-2026",
+   "records": 409
+  },
+  {
+   "beteckn": "A 40345-2026",
+   "records": 87
+  },
+  {
+   "beteckn": "A 40397-2026",
+   "records": 30
+  },
+  {
+   "beteckn": "A 40420-2026",
+   "records": 11
+  },
+  {
+   "beteckn": "A 40421-2026",
+   "records": 40
+  },
+  {
+   "beteckn": "A 40427-2026",
+   "records": 15
+  },
+  {
+   "beteckn": "A 40435-2026",
+   "records": 45
+  },
+  {
+   "beteckn": "A 40449-2026",
+   "records": 213
+  },
+  {
+   "beteckn": "A 40454-2026",
+   "records": 31
+  },
+  {
+   "beteckn": "A 40458-2026",
+   "records": 1
+  },
+  {
+   "beteckn": "A 40474-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40552-2026",
+   "records": 65
+  },
+  {
+   "beteckn": "A 40473-2026",
+   "records": 4
+  },
+  {
+   "beteckn": "A 40480-2026",
+   "records": 161
+  },
+  {
+   "beteckn": "A 40481-2026",
+   "records": 257
+  },
+  {
+   "beteckn": "A 40500-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40518-2026",
+   "records": 8
+  },
+  {
+   "beteckn": "A 40530-2026",
+   "records": 21
+  },
+  {
+   "beteckn": "A 40633-2026",
+   "records": 16
+  },
+  {
+   "beteckn": "A 40612-2026",
+   "records": 164
+  },
+  {
+   "beteckn": "A 40492-2026",
+   "records": 7
+  },
+  {
+   "beteckn": "A 40579-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40540-2026",
+   "records": 11
+  },
+  {
+   "beteckn": "A 40499-2026",
+   "records": 88
+  },
+  {
+   "beteckn": "A 40613-2026",
+   "records": 56
+  },
+  {
+   "beteckn": "A 40624-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40603-2026",
+   "records": 26
+  },
+  {
+   "beteckn": "A 40483-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40550-2026",
+   "records": 64
+  },
+  {
+   "beteckn": "A 40551-2026",
+   "records": 134
+  },
+  {
+   "beteckn": "A 40490-2026",
+   "records": 46
+  },
+  {
+   "beteckn": "A 40489-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40586-2026",
+   "records": 6
+  },
+  {
+   "beteckn": "A 40642-2026",
+   "records": 2
+  },
+  {
+   "beteckn": "A 40649-2026",
+   "records": 31
+  },
+  {
+   "beteckn": "A 40662-2026",
+   "records": 46
+  },
+  {
+   "beteckn": "A 40667-2026",
+   "records": 46
+  },
+  {
+   "beteckn": "A 40669-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40672-2026",
+   "records": 46
+  },
+  {
+   "beteckn": "A 40685-2026",
+   "records": 9
+  },
+  {
+   "beteckn": "A 40690-2026",
+   "records": 2
+  },
+  {
+   "beteckn": "A 40707-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40721-2026",
+   "records": 3
+  },
+  {
+   "beteckn": "A 40736-2026",
+   "records": 37
+  },
+  {
+   "beteckn": "A 40777-2026",
+   "records": 2
+  },
+  {
+   "beteckn": "A 40784-2026",
+   "records": 1
+  },
+  {
+   "beteckn": "A 40786-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40787-2026",
+   "records": 135
+  },
+  {
+   "beteckn": "A 40788-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40793-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40796-2026",
+   "records": 17
+  },
+  {
+   "beteckn": "A 40797-2026",
+   "records": 6
+  },
+  {
+   "beteckn": "A 40805-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40814-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40816-2026",
+   "records": 2
+  },
+  {
+   "beteckn": "A 40820-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40823-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40827-2026",
+   "records": 0
+  },
+  {
+   "beteckn": "A 40832-2026",
+   "records": 131
+  },
+  {
+   "beteckn": "A 41014-2026",
+   "records": 2
+  },
+  {
+   "beteckn": "A 40930-2026",
+   "records": 63
+  },
+  {
+   "beteckn": "A 41020-2026",
+   "records": 1073
+  },
+  {
+   "beteckn": "A 40868-2026",
+   "records": 487
+  },
+  {
+   "beteckn": "A 40919-2026",
+   "records": 2
+  },
+  {
+   "beteckn": "A 40937-2026",
+   "records": 3
+  },
+  {
+   "beteckn": "A 40939-2026",
+   "records": 3
+  },
+  {
+   "beteckn": "A 40875-2026",
+   "records": 135
+  },
+  {
+   "beteckn": "A 41012-2026",
+   "records": 61
+  },
+  {
+   "beteckn": "A 40869-2026",
+   "records": 1
+  },
+  {
+   "beteckn": "A 40874-2026",
+   "records": 556
+  },
+  {
+   "beteckn": "A 41017-2026",
+   "records": 600
+  },
+  {
+   "beteckn": "A 40973-2026",
+   "records": 296
+  },
+  {
+   "beteckn": "A 40920-2026",
+   "records": 3
+  },
+  {
+   "beteckn": "A 41010-2026",
+   "records": 1965
+  },
+  {
+   "beteckn": "A 40898-2026",
+   "records": 0
+  }
+ ]
+}

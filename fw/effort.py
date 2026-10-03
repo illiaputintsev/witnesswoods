@@ -42,10 +42,22 @@ def site_effort(site_4326) -> dict:
             "truncated": near["truncated"], "source_url": near["source_url"]}
 
 
+def week_path(lannr: str):
+    return config.DATA / f"effort_week_{lannr}.json"
+
+
 def county_reference(lannr: str) -> dict:
+    """The county's effort reference. Dalarna, Gävleborg and Värmland keep their 50-site June-September
+    references (used for tuning and validation); other counties use their own sites from the national week
+    (scripts/national.py), or the national week median when a county had fewer than 10 sites."""
     p = _path(lannr)
     if p.exists():
         ref = json.loads(p.read_text())
+        if ref.get("definition") == DEFINITION:
+            return ref
+    w = week_path(lannr)
+    if w.exists():
+        ref = json.loads(w.read_text())
         if ref.get("definition") == DEFINITION:
             return ref
     notes = skogs.notifications_between(lannr, *WINDOW)
