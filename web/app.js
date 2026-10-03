@@ -708,9 +708,9 @@ async function sendChat(d, q) {
       body: JSON.stringify({ beteckn: b, messages: hist.map(({ role, content }) => ({ role, content })) }) });
     if (!r.ok) throw new Error(r.status === 503 ? "Chat needs the live backend with an API key." : `Chat failed (${r.status}).`);
     const ans = await r.json();
-    wait.remove();
     hist.push({ role: "assistant", content: ans.text, sources: ans.sources });
-    chatBubble(hist[hist.length - 1], d);
+    const done = chatBubble(hist[hist.length - 1], d);
+    wait.replaceWith(done);
   } catch (e) {
     wait.classList.remove("pending"); wait.innerHTML = esc(e.message);
     hist.pop();
@@ -720,17 +720,29 @@ function richText(t, ev) {
   const parts = String(t).split(/```chart\s*([\s\S]*?)```/);
   return parts.map((p, i) => {
     if (i % 2 === 1) { try { return chartSVG(JSON.parse(p)); } catch { return ""; } }
-    let h = esc(p).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/(^|[^*])\*(?!\s)(.+?)\*/g, "$1<i>$2</i>")
-      .replace(/\[(E-\d+)\]/g, (m, id) => chips([id], ev || {}));
+    let h = esc(p)
+      .replace(/\[(E-\d+)\]\((https?:[^)\s]+)\)/g, (m, id) => chips([id], ev || {}))
+      .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, (m, t, u) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`)
+      .replace(/\[(E-\d+(?:,\s*E-\d+)*)\]/g, (m, ids) => chips(ids.split(/,\s*/), ev || {}))
+      .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/(^|[^*])\*(?!\s)(.+?)\*/g, "$1<i>$2</i>");
     const lines = h.split("\n"), out = [];
-    let inList = false;
+    let inList = false, table = [];
+    const flushTable = () => {
+      if (!table.length) return;
+      const rows = table.filter((r) => !/^\s*\|?\s*:?-{2,}/.test(r)).map((r) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim()));
+      out.push(`<div class="tbl"><table>${rows.map((r, i) => `<tr>${r.map((c) => i === 0 ? `<th>${c}</th>` : `<td>${c}</td>`).join("")}</tr>`).join("")}</table></div>`);
+      table = [];
+    };
     for (const ln of lines) {
+      if (/^\s*\|.*\|\s*$/.test(ln)) { if (inList) { out.push("</ul>"); inList = false; } table.push(ln); continue; }
+      flushTable();
       const li = ln.match(/^\s*[-•]\s+(.*)/) || ln.match(/^\s*\d+\.\s+(.*)/);
       if (li) { if (!inList) { out.push("<ul>"); inList = true; } out.push(`<li>${li[1]}</li>`); continue; }
       if (inList) { out.push("</ul>"); inList = false; }
       if (ln.trim().startsWith("#")) out.push(`<p><b>${ln.replace(/^#+\s*/, "")}</b></p>`);
       else if (ln.trim()) out.push(`<p>${ln}</p>`);
     }
+    flushTable();
     if (inList) out.push("</ul>");
     return out.join("");
   }).join("");

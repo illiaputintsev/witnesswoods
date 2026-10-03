@@ -10,14 +10,18 @@ import anthropic
 from fw import agent, config, tools
 
 MAX_TOKENS = 6000
-WEB_SEARCH = {"type": "web_search_20260209", "name": "web_search", "max_uses": 3}
+WEB_SEARCH = {"type": "web_search_20260209", "name": "web_search", "max_uses": 8}
+ARTFAKTA = "https://artfakta.se/taxa/{}"
 
 SYSTEM = """You are Forest Witness, answering follow-up questions from a human reviewer about ONE notified felling site in Sweden. The full dossier and evidence for the site are in <site_context>.
 
 How to answer:
 - Be concrete and brief; use short paragraphs or bullets.
 - Facts about the site must come from <site_context>; cite their evidence IDs like [E-0123].
-- For general knowledge about a species (ecology, habitat, threats, how to survey it), you may use web_search; name the source for anything you take from the web.
+- For species questions, use <site_context>.species_facts first: it is the official Swedish Red List 2025 entry for each red-listed species near the site (category, criteria, landscapes, forest habitats, negative impact factors, dependence on dead wood and living trees) plus its Artfakta page. Cite it as "Swedish Red List 2025" and link the Artfakta page.
+- Use web_search only for what species_facts does not cover (for example identification, survey season, substrate details), at most one search per species, eligible species first. Name the source for anything you take from the web.
+- Never talk about tool limits or apologise for them. If a fact is not available, say briefly what the reviewer can check (the species' Artfakta page).
+- Tables are fine (markdown).
 - When the reviewer asks for a plan, give a practical field-visit plan tied to this site's records, distances and the window-closing date.
 - When a chart helps, add one fenced block exactly like:
 ```chart
@@ -44,11 +48,23 @@ def site_context(beteckn: str) -> str:
                                     "species_lines", "context", "rubric_status", "evidence")}
     for s in keep.get("species_lines") or []:
         s.pop("photo", None)
-    records = []
-    for sp in p["rings"][1000]["redlisted"].values():
+    records, facts = [], []
+    from fw import redlist
+    wide = sorted(p["rings"][1000]["redlisted"].values(),
+                  key=lambda s: (not tools.rubric._eligible(s), {"CR": 0, "EN": 1, "VU": 2, "NT": 3}.get(s["category"], 9), s["min_distance_m"]))
+    for sp in wide:
         for r in sp["recs"][:40]:
             records.append([sp["scientific_name"], sp["swedish_name"], sp["category"], sp["group"], sp["mobility"],
-                            r["year"], r["dist_m"], r["unc_m"]])
+                            r["year"], r["dist_m"], r["unc_m"], sp.get("evidence_id")])
+        if len(facts) < 15 and sp["category"] in ("CR", "EN", "VU", "NT"):
+            e = redlist.lookup(sp["scientific_name"]) or {}
+            facts.append({"scientific": sp["scientific_name"], "swedish": sp["swedish_name"], "group": sp["group"],
+                          "category": e.get("category"), "criteria": e.get("criteria"), "eligible": tools.rubric._eligible(sp),
+                          "mobility": sp["mobility"], "landscapes": e.get("landscapes"), "forest_habitats": e.get("habitats"),
+                          "negative_impacts": e.get("negative_impacts"), "dead_wood": e.get("dead_wood"),
+                          "living_trees": e.get("living_trees"), "evidence_id": sp.get("evidence_id"),
+                          "nearest_m": sp["min_distance_m"], "records_within_1000m": sp["records"],
+                          "artfakta": ARTFAKTA.format(sp["taxon_id"])})
     e = p["effort"]
     # Exact, precomputed aggregates so charts never depend on the model counting rows
     from collections import Counter
@@ -66,7 +82,8 @@ def site_context(beteckn: str) -> str:
         "rings": {str(r): {k: p["rings"][r][k] for k in ("records", "kept", "species", "days", "threatened", "eligible", "nt_eligible")}
                   for r in p["rings"]},
         "felling_overlap": {k: p["felling"][k] for k in ("overlap_ha", "overlap_pct", "fellings")},
-        "redlisted_records_columns": ["scientific", "swedish", "category", "group", "mobility", "year", "dist_m", "unc_m"],
+        "species_facts": facts,
+        "redlisted_records_columns": ["scientific", "swedish", "category", "group", "mobility", "year", "dist_m", "unc_m", "evidence_id"],
         "redlisted_records": records[:400],
     }
     return json.dumps(ctx, ensure_ascii=False, separators=(",", ":"))
@@ -88,7 +105,7 @@ def ask(beteckn: str, messages: list[dict]) -> dict:
     except anthropic.APIStatusError:
         route = "direct"  # e.g. a proxy that does not pass server tools through
         resp = agent.make_client("direct", "").messages.create(**params)
-    for _ in range(2):  # server tools may pause a long turn
+    for _ in range(4):  # server tools may pause a long turn
         if resp.stop_reason != "pause_turn":
             break
         params["messages"] = convo + [{"role": "assistant", "content": resp.content}]

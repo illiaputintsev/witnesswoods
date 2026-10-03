@@ -167,6 +167,10 @@ body.cty-closed .headline-overlay { right: 60px; }
 .chat-form { display: flex; gap: 6px; }
 .chat-form textarea { flex: 1; resize: vertical; background: rgba(13,20,17,0.8); color: var(--snow); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; font: inherit; font-size: 14px; }
 .chat-form .primary { padding: 6px 12px; }
+.tbl { overflow-x: auto; margin: 4px 0 8px; }
+.tbl table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+.tbl th, .tbl td { border-bottom: 1px solid var(--line); padding: 3px 6px; text-align: left; vertical-align: top; }
+.tbl th { color: var(--moss-grey); font-weight: 600; }
 .chart { margin: 6px 0; } .chart svg { width: 100%; height: auto; display: block; background: rgba(19,28,24,0.9); border-radius: 6px; }
 .chart figcaption { font-size: 11px; color: var(--moss-grey); }
 .tile-note { position: absolute; z-index: 4; right: 12px; bottom: 12px; font-size: 11px; color: var(--moss-grey); background: var(--panel); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line); }
