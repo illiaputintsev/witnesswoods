@@ -15,18 +15,31 @@ WINDOW = ("2026-06-01", "2026-10-01")  # same window as the validation eval set
 SAMPLE = 50
 SEED = 42
 RADIUS_M = 1000
-DEFINITION = "polygon+1000m_since2016_unc1000_v3"  # bump when the definition changes; stale caches are recomputed
+DEFINITION = "polygon+1000m_since2016_unc1000_near250_v4"  # bump when the definition changes; stale caches are recomputed
 
 
 def _path(lannr: str):
     return config.DATA / f"effort_ref_{lannr}.json"
 
 
+NEAR_M = 250
+
+
+def near_site(rows, site_radius_m: float) -> dict:
+    """Near-site effort, by the same rules as the species rings: inside the polygon (uncertainty <= the
+    site's equivalent radius, capped at 100 m) and within 250 m (uncertainty <= 250 m)."""
+    inside = [(r, d) for r, d in rows if d == 0]
+    within = [(r, d) for r, d in rows if d <= NEAR_M]
+    return {"inside": gbif.effort_stats(inside, min(site_radius_m, 100)),
+            "within_250m": gbif.effort_stats(within, NEAR_M)}
+
+
 def site_effort(site_4326) -> dict:
-    """Effort around one site; same geometry and filters as the 1000 m species ring."""
+    """Effort around one site; same geometry and filters as the species rings."""
     near = gbif.records_within(site_4326, RADIUS_M)
-    return {"radius_m": RADIUS_M, **gbif.effort_stats(near["rows"]), "truncated": near["truncated"],
-            "source_url": near["source_url"]}
+    return {"radius_m": RADIUS_M, **gbif.effort_stats(near["rows"]),
+            "near_site": near_site(near["rows"], geo.equivalent_radius_m(site_4326)),
+            "truncated": near["truncated"], "source_url": near["source_url"]}
 
 
 def county_reference(lannr: str) -> dict:
@@ -41,7 +54,8 @@ def county_reference(lannr: str) -> dict:
     for n in sample:
         e = site_effort(geo.from_geojson(n["geometry"]))
         counts.append({"beteckn": n["beteckn"], "records": e["records"], "species": e["species"],
-                       "days": e["days"], "truncated": e["truncated"]})
+                       "days": e["days"], "inside": e["near_site"]["inside"]["records"],
+                       "within_250m": e["near_site"]["within_250m"]["records"], "truncated": e["truncated"]})
     recs = sorted(c["records"] for c in counts)
     q = statistics.quantiles(recs, n=4)
     ref = {
@@ -50,7 +64,10 @@ def county_reference(lannr: str) -> dict:
         "median_records": statistics.median(recs), "p25_records": q[0], "p75_records": q[2],
         "median_species": statistics.median(c["species"] for c in counts),
         "median_days": statistics.median(c["days"] for c in counts),
-        "zero_record_sites": sum(r == 0 for r in recs), "sites": counts,
+        "zero_record_sites": sum(r == 0 for r in recs),
+        "median_within_250m": statistics.median(c["within_250m"] for c in counts),
+        "median_inside": statistics.median(c["inside"] for c in counts),
+        "zero_within_250m_sites": sum(c["within_250m"] == 0 for c in counts), "sites": counts,
     }
     p.write_text(json.dumps(ref, indent=1, ensure_ascii=False))
     return ref

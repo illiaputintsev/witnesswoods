@@ -123,6 +123,7 @@ class Run:
                                                     f"You have at most {MAX_TOOL_CALLS} tool calls for it, "
                                                     "including record_finding. Finish by calling record_finding once."})
         path, n_calls, nudges, warned = [], 0, 0, False
+        species_queried = False  # the rubric hint is shown only once the agent has looked at species itself
         meta = {"model": self.model, "route": self.route, "run_id": self.run_id, "session_id": session_id}
         while True:
             if self.totals["usd"] >= self.budget:
@@ -140,6 +141,7 @@ class Run:
                 messages.append({"role": "user", "content": "Finish this notification by calling record_finding."})
                 continue
             results, done = [], None
+            species_queried = species_queried or any(b.name == "query_species" for b in uses)
             for b in uses:
                 n_calls += 1
                 args = dict(b.input)
@@ -153,6 +155,8 @@ class Run:
                             done = out
                     else:
                         out = tools.FUNCS[b.name](**args)
+                        if b.name == "observation_effort" and not species_queried:
+                            out["rubric_hint"] = "shown after you call query_species for this site"
                     is_err = isinstance(out, dict) and out.get("ok") is False
                 except Exception as e:  # bad arguments or a data error: tell the agent, keep going
                     out, is_err = {"error": f"{type(e).__name__}: {e}"}, True

@@ -109,9 +109,11 @@ def observation_effort(beteckn: str) -> dict:
         "definition": e["definition"], "records": e["records"], "distinct_species": e["species"],
         "observation_days": e["days"], "county_median_records": e["county_median"],
         "county_p25_records": e["county_p25"], "percentile_in_county_sample": e["percentile"],
-        "level": e["level"], "reference": e["reference"], "evidence_id": e["evidence_id"],
-        "rubric_hint": rubric.hint(p),
-        "notes": "Low effort means few people have recorded here; it says nothing about what lives here.",
+        "level": e["level"], "reference": e["reference"], "near_site": e["near_site"],
+        "evidence_id": e["evidence_id"], "rubric_hint": rubric.hint(p),
+        "notes": "Low effort means few people have recorded here; it says nothing about what lives here. "
+                 "The 1000 m figure describes the surroundings; describe absence on or next to the site only "
+                 "from the near_site figures.",
     }
 
 
@@ -154,9 +156,25 @@ def _banned(texts: list[str]) -> list[str]:
     return sorted(set(hits))
 
 
+def _clean(t):
+    """Strip whitespace and one unmatched trailing double quote (a JSON-escaping artefact seen in M2 output)."""
+    if not isinstance(t, str):
+        return t
+    t = t.strip()
+    return t[:-1].rstrip() if t.endswith('"') and t.count('"') % 2 == 1 else t
+
+
 def record_finding(beteckn: str, priority: str, reasons: list, next_action: str, contradictions: list | None = None,
                    uncertainties: list | None = None, not_established: list | None = None,
                    override_reason: dict | None = None, _meta: dict | None = None) -> dict:
+    next_action = _clean(next_action)
+    uncertainties = [_clean(x) for x in uncertainties or []]
+    not_established = [_clean(x) for x in not_established or []]
+    for it in (reasons or []) + (contradictions or []) + ([override_reason] if override_reason else []):
+        if isinstance(it, dict):
+            for f in ("claim", "text"):
+                if f in it:
+                    it[f] = _clean(it[f])
     p = _profile(beteckn)
     errors = []
     if priority not in PRIORITIES:
@@ -278,14 +296,16 @@ SCHEMAS = [
                     "(0 = inside). A record counts only if its coordinate uncertainty is no larger than the buffer "
                     "(inside: the site's equivalent radius). Returns record counts, records dropped for uncertainty, "
                     "red-listed species with Swedish Red List 2025 category, forest/felling/mobility flags and "
-                    "evidence_ids, top records with GBIF links, and the deterministic rubric_hint.",
+                    "evidence_ids, top records with GBIF links, and the deterministic rubric_hint (the rubric applied "
+                    "to all rings and effort).",
      "input_schema": {"type": "object", "properties": {"beteckn": _B, "buffer_m": {"type": "integer", "enum": list(BUFFERS),
                       "description": "Distance from the polygon edge in metres."}}, "required": ["beteckn", "buffer_m"]}},
     {"name": "observation_effort",
-     "description": "How much recording has happened near the site: Artportalen records, distinct species and "
+     "description": "How much recording has happened around the site: Artportalen records, distinct species and "
                     "observation days since 2016 within 1000 m of the polygon, compared with a county reference "
-                    "sample. Use it before treating few records as meaningful. Returns an evidence_id and the "
-                    "rubric_hint.",
+                    "sample, plus near-site effort (inside the polygon and within 250 m) with county medians. Use it "
+                    "before treating few records as meaningful. Returns an evidence_id, and the rubric_hint once "
+                    "query_species has been called for this site.",
      "input_schema": {"type": "object", "properties": {"beteckn": _B}, "required": ["beteckn"]}},
     {"name": "redlist_lookup",
      "description": "Full Swedish Red List 2025 entry for one species: category, criteria, landscapes, forest "

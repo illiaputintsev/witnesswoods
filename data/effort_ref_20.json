@@ -1,6 +1,6 @@
 {
  "lannr": "20",
- "definition": "polygon+1000m_since2016_unc1000_v3",
+ "definition": "polygon+1000m_since2016_unc1000_near250_v4",
  "window": [
   "2026-06-01",
   "2026-10-01"
@@ -16,12 +16,17 @@
  "median_species": 34.5,
  "median_days": 7.0,
  "zero_record_sites": 4,
+ "median_within_250m": 3.0,
+ "median_inside": 0.0,
+ "zero_within_250m_sites": 15,
  "sites": [
   {
    "beteckn": "A 38554-2026",
    "records": 16,
    "species": 9,
    "days": 7,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -29,6 +34,8 @@
    "records": 186,
    "species": 40,
    "days": 5,
+   "inside": 113,
+   "within_250m": 140,
    "truncated": false
   },
   {
@@ -36,6 +43,8 @@
    "records": 1377,
    "species": 338,
    "days": 96,
+   "inside": 10,
+   "within_250m": 235,
    "truncated": false
   },
   {
@@ -43,6 +52,8 @@
    "records": 69,
    "species": 39,
    "days": 3,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -50,6 +61,8 @@
    "records": 29,
    "species": 23,
    "days": 5,
+   "inside": 0,
+   "within_250m": 14,
    "truncated": false
   },
   {
@@ -57,6 +70,8 @@
    "records": 163,
    "species": 25,
    "days": 6,
+   "inside": 0,
+   "within_250m": 9,
    "truncated": false
   },
   {
@@ -64,6 +79,8 @@
    "records": 0,
    "species": 0,
    "days": 0,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -71,6 +88,8 @@
    "records": 90,
    "species": 39,
    "days": 62,
+   "inside": 0,
+   "within_250m": 17,
    "truncated": false
   },
   {
@@ -78,6 +97,8 @@
    "records": 53,
    "species": 29,
    "days": 17,
+   "inside": 0,
+   "within_250m": 6,
    "truncated": false
   },
   {
@@ -85,6 +106,8 @@
    "records": 30,
    "species": 29,
    "days": 11,
+   "inside": 0,
+   "within_250m": 3,
    "truncated": false
   },
   {
@@ -92,6 +115,8 @@
    "records": 125,
    "species": 111,
    "days": 12,
+   "inside": 3,
+   "within_250m": 3,
    "truncated": false
   },
   {
@@ -99,6 +124,8 @@
    "records": 114,
    "species": 81,
    "days": 29,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -106,6 +133,8 @@
    "records": 20,
    "species": 17,
    "days": 7,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -113,6 +142,8 @@
    "records": 0,
    "species": 0,
    "days": 0,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -120,6 +151,8 @@
    "records": 76,
    "species": 20,
    "days": 1,
+   "inside": 75,
+   "within_250m": 76,
    "truncated": false
   },
   {
@@ -127,6 +160,8 @@
    "records": 7,
    "species": 6,
    "days": 5,
+   "inside": 0,
+   "within_250m": 3,
    "truncated": false
   },
   {
@@ -134,6 +169,8 @@
    "records": 602,
    "species": 197,
    "days": 54,
+   "inside": 105,
+   "within_250m": 272,
    "truncated": false
   },
   {
@@ -141,6 +178,8 @@
    "records": 42,
    "species": 40,
    "days": 15,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -148,6 +187,8 @@
    "records": 62,
    "species": 35,
    "days": 20,
+   "inside": 9,
+   "within_250m": 13,
    "truncated": false
   },
   {
@@ -155,6 +196,8 @@
    "records": 118,
    "species": 93,
    "days": 31,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -162,6 +205,8 @@
    "records": 0,
    "species": 0,
    "days": 0,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -169,6 +214,8 @@
    "records": 91,
    "species": 52,
    "days": 12,
+   "inside": 0,
+   "within_250m": 10,
    "truncated": false
   },
   {
@@ -176,6 +223,8 @@
    "records": 29,
    "species": 12,
    "days": 3,
+   "inside": 0,
+   "within_250m": 1,
    "truncated": false
   },
   {
@@ -183,6 +232,8 @@
    "records": 211,
    "species": 44,
    "days": 5,
+   "inside": 94,
+   "within_250m": 161,
    "truncated": false
   },
   {
@@ -190,6 +241,8 @@
    "records": 73,
    "species": 38,
    "days": 4,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -197,6 +250,8 @@
    "records": 2,
    "species": 2,
    "days": 1,
+   "inside": 0,
+   "within_250m": 2,
    "truncated": false
   },
   {
@@ -204,6 +259,8 @@
    "records": 171,
    "species": 104,
    "days": 9,
+   "inside": 0,
+   "within_250m": 2,
    "truncated": false
   },
   {
@@ -211,6 +268,8 @@
    "records": 46,
    "species": 33,
    "days": 13,
+   "inside": 0,
+   "within_250m": 9,
    "truncated": false
   },
   {
@@ -218,6 +277,8 @@
    "records": 30,
    "species": 15,
    "days": 8,
+   "inside": 0,
+   "within_250m": 2,
    "truncated": false
   },
   {
@@ -225,6 +286,8 @@
    "records": 44,
    "species": 16,
    "days": 10,
+   "inside": 14,
+   "within_250m": 19,
    "truncated": false
   },
   {
@@ -232,6 +295,8 @@
    "records": 24,
    "species": 23,
    "days": 5,
+   "inside": 0,
+   "within_250m": 3,
    "truncated": false
   },
   {
@@ -239,6 +304,8 @@
    "records": 78,
    "species": 56,
    "days": 29,
+   "inside": 0,
+   "within_250m": 27,
    "truncated": false
   },
   {
@@ -246,6 +313,8 @@
    "records": 31,
    "species": 29,
    "days": 5,
+   "inside": 0,
+   "within_250m": 20,
    "truncated": false
   },
   {
@@ -253,6 +322,8 @@
    "records": 57,
    "species": 41,
    "days": 27,
+   "inside": 0,
+   "within_250m": 2,
    "truncated": false
   },
   {
@@ -260,6 +331,8 @@
    "records": 142,
    "species": 70,
    "days": 4,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -267,6 +340,8 @@
    "records": 220,
    "species": 112,
    "days": 40,
+   "inside": 0,
+   "within_250m": 1,
    "truncated": false
   },
   {
@@ -274,6 +349,8 @@
    "records": 154,
    "species": 46,
    "days": 28,
+   "inside": 0,
+   "within_250m": 20,
    "truncated": false
   },
   {
@@ -281,6 +358,8 @@
    "records": 63,
    "species": 34,
    "days": 7,
+   "inside": 0,
+   "within_250m": 15,
    "truncated": false
   },
   {
@@ -288,6 +367,8 @@
    "records": 87,
    "species": 41,
    "days": 12,
+   "inside": 0,
+   "within_250m": 8,
    "truncated": false
   },
   {
@@ -295,6 +376,8 @@
    "records": 3,
    "species": 3,
    "days": 3,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -302,6 +385,8 @@
    "records": 372,
    "species": 255,
    "days": 30,
+   "inside": 0,
+   "within_250m": 1,
    "truncated": false
   },
   {
@@ -309,6 +394,8 @@
    "records": 0,
    "species": 0,
    "days": 0,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -316,6 +403,8 @@
    "records": 9,
    "species": 7,
    "days": 4,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -323,6 +412,8 @@
    "records": 53,
    "species": 22,
    "days": 3,
+   "inside": 3,
+   "within_250m": 10,
    "truncated": false
   },
   {
@@ -330,6 +421,8 @@
    "records": 456,
    "species": 169,
    "days": 29,
+   "inside": 0,
+   "within_250m": 5,
    "truncated": false
   },
   {
@@ -337,6 +430,8 @@
    "records": 130,
    "species": 109,
    "days": 14,
+   "inside": 0,
+   "within_250m": 0,
    "truncated": false
   },
   {
@@ -344,6 +439,8 @@
    "records": 12,
    "species": 10,
    "days": 2,
+   "inside": 0,
+   "within_250m": 1,
    "truncated": false
   },
   {
@@ -351,6 +448,8 @@
    "records": 124,
    "species": 21,
    "days": 3,
+   "inside": 80,
+   "within_250m": 108,
    "truncated": false
   },
   {
@@ -358,6 +457,8 @@
    "records": 494,
    "species": 252,
    "days": 110,
+   "inside": 0,
+   "within_250m": 1,
    "truncated": false
   },
   {
@@ -365,6 +466,8 @@
    "records": 107,
    "species": 103,
    "days": 7,
+   "inside": 0,
+   "within_250m": 99,
    "truncated": false
   }
  ]

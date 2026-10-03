@@ -64,6 +64,11 @@ def build(beteckn: str, lannr_ref: str | None = None) -> dict:
     eff.update(county_median=ref["median_records"], county_p25=ref["p25_records"],
                percentile=effort.percentile(eff["records"], ref), level=effort.level(eff["records"], ref),
                definition="records since 2016 within 1000 m of the polygon, coordinate uncertainty <= 1000 m",
+               near_site={**effort.near_site(near["rows"], site_radius),
+                          "county_median_within_250m": ref["median_within_250m"],
+                          "county_median_inside": ref["median_inside"],
+                          "note": "Use these near-site figures, not the 1000 m figure, when describing absence of "
+                                  "records on or next to the site."},
                reference=f"{ref['sample']} county {ref['lannr']} notifications, {ref['window'][0]}..{ref['window'][1]}")
     e_eff = evidence.add(beteckn, "observation_effort", eff, near["source_url"])
     fetched = {"total": near["fetched"], "truncated": near["truncated"], "source_url": near["source_url"]}
