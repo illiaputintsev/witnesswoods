@@ -24,10 +24,15 @@ def _path(url: str):
     return CACHE_DIR / f"{hashlib.sha256(url.encode()).hexdigest()}.json"
 
 
-def get_json(url: str, params: dict | None = None, refresh: bool = False) -> dict:
-    """GET a JSON resource, served from disk if cached. Errors are never cached."""
+def get_json(url: str, params: dict | None = None, refresh: bool = False,
+             slim=None, slim_tag: str = "") -> dict:
+    """GET a JSON resource, served from disk if cached. Errors are never cached.
+
+    `slim` optionally shrinks the body before it is stored (e.g. keep only the
+    GBIF fields we use); `slim_tag` names that shape so it gets its own cache entry.
+    """
     u = full_url(url, params)
-    p = _path(u)
+    p = _path(u + (f"#{slim_tag}" if slim_tag else ""))
     if p.exists() and not refresh:
         return json.loads(p.read_text())["body"]
     for attempt in range(3):
@@ -43,6 +48,8 @@ def get_json(url: str, params: dict | None = None, refresh: bool = False) -> dic
     # ArcGIS reports errors with HTTP 200 and an "error" key; do not cache those
     if isinstance(body, dict) and "error" in body:
         raise RuntimeError(f"API error for {u}: {body['error']}")
+    if slim:
+        body = slim(body)
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps({"url": u, "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%S"), "body": body}))
     return body

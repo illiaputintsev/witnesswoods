@@ -1,0 +1,269 @@
+{
+ "lannr": "20",
+ "window": [
+  "2026-06-01",
+  "2026-10-01"
+ ],
+ "population": 472,
+ "sample": 50,
+ "seed": 42,
+ "radius_m": 1000,
+ "since_year": 2016,
+ "median_records": 36.0,
+ "p25_records": 14.75,
+ "p75_records": 114.25,
+ "median_species": 22.0,
+ "zero_record_sites": 4,
+ "sites": [
+  {
+   "beteckn": "A 38554-2026",
+   "records": 15,
+   "species": 8
+  },
+  {
+   "beteckn": "A 33301-2026",
+   "records": 186,
+   "species": 40
+  },
+  {
+   "beteckn": "A 25923-2026",
+   "records": 1327,
+   "species": 333
+  },
+  {
+   "beteckn": "A 39143-2026",
+   "records": 37,
+   "species": 25
+  },
+  {
+   "beteckn": "A 35647-2026",
+   "records": 18,
+   "species": 18
+  },
+  {
+   "beteckn": "A 35330-2026",
+   "records": 162,
+   "species": 24
+  },
+  {
+   "beteckn": "A 35231-2026",
+   "records": 0,
+   "species": 0
+  },
+  {
+   "beteckn": "A 34714-2026",
+   "records": 68,
+   "species": 30
+  },
+  {
+   "beteckn": "A 39097-2026",
+   "records": 30,
+   "species": 15
+  },
+  {
+   "beteckn": "A 32456-2026",
+   "records": 12,
+   "species": 12
+  },
+  {
+   "beteckn": "A 38556-2026",
+   "records": 126,
+   "species": 112
+  },
+  {
+   "beteckn": "A 40393-2026",
+   "records": 111,
+   "species": 78
+  },
+  {
+   "beteckn": "A 37894-2026",
+   "records": 19,
+   "species": 16
+  },
+  {
+   "beteckn": "A 31437-2026",
+   "records": 0,
+   "species": 0
+  },
+  {
+   "beteckn": "A 38194-2026",
+   "records": 76,
+   "species": 20
+  },
+  {
+   "beteckn": "A 37036-2026",
+   "records": 7,
+   "species": 6
+  },
+  {
+   "beteckn": "A 26767-2026",
+   "records": 541,
+   "species": 174
+  },
+  {
+   "beteckn": "A 26761-2026",
+   "records": 32,
+   "species": 30
+  },
+  {
+   "beteckn": "A 32154-2026",
+   "records": 15,
+   "species": 6
+  },
+  {
+   "beteckn": "A 35179-2026",
+   "records": 110,
+   "species": 87
+  },
+  {
+   "beteckn": "A 35294-2026",
+   "records": 0,
+   "species": 0
+  },
+  {
+   "beteckn": "A 37560-2026",
+   "records": 67,
+   "species": 40
+  },
+  {
+   "beteckn": "A 38169-2026",
+   "records": 13,
+   "species": 8
+  },
+  {
+   "beteckn": "A 26133-2026",
+   "records": 204,
+   "species": 44
+  },
+  {
+   "beteckn": "A 37960-2026",
+   "records": 14,
+   "species": 9
+  },
+  {
+   "beteckn": "A 35078-2026",
+   "records": 2,
+   "species": 2
+  },
+  {
+   "beteckn": "A 38907-2026",
+   "records": 20,
+   "species": 10
+  },
+  {
+   "beteckn": "A 38679-2026",
+   "records": 30,
+   "species": 20
+  },
+  {
+   "beteckn": "A 38831-2026",
+   "records": 28,
+   "species": 15
+  },
+  {
+   "beteckn": "A 36873-2026",
+   "records": 24,
+   "species": 9
+  },
+  {
+   "beteckn": "A 35210-2026",
+   "records": 24,
+   "species": 23
+  },
+  {
+   "beteckn": "A 37278-2026",
+   "records": 73,
+   "species": 54
+  },
+  {
+   "beteckn": "A 38163-2026",
+   "records": 24,
+   "species": 23
+  },
+  {
+   "beteckn": "A 35837-2026",
+   "records": 37,
+   "species": 25
+  },
+  {
+   "beteckn": "A 39714-2026",
+   "records": 142,
+   "species": 70
+  },
+  {
+   "beteckn": "A 40115-2026",
+   "records": 128,
+   "species": 60
+  },
+  {
+   "beteckn": "A 25195-2026",
+   "records": 80,
+   "species": 28
+  },
+  {
+   "beteckn": "A 39108-2026",
+   "records": 35,
+   "species": 20
+  },
+  {
+   "beteckn": "A 39514-2026",
+   "records": 83,
+   "species": 39
+  },
+  {
+   "beteckn": "A 34818-2026",
+   "records": 2,
+   "species": 2
+  },
+  {
+   "beteckn": "A 38793-2026",
+   "records": 371,
+   "species": 255
+  },
+  {
+   "beteckn": "A 36143-2026",
+   "records": 0,
+   "species": 0
+  },
+  {
+   "beteckn": "A 34796-2026",
+   "records": 10,
+   "species": 8
+  },
+  {
+   "beteckn": "A 34959-2026",
+   "records": 38,
+   "species": 19
+  },
+  {
+   "beteckn": "A 39023-2026",
+   "records": 430,
+   "species": 168
+  },
+  {
+   "beteckn": "A 36104-2026",
+   "records": 56,
+   "species": 52
+  },
+  {
+   "beteckn": "A 36703-2026",
+   "records": 12,
+   "species": 10
+  },
+  {
+   "beteckn": "A 32232-2026",
+   "records": 124,
+   "species": 21
+  },
+  {
+   "beteckn": "A 36364-2026",
+   "records": 150,
+   "species": 116
+  },
+  {
+   "beteckn": "A 39884-2026",
+   "records": 107,
+   "species": 103
+  }
+ ]
+}
