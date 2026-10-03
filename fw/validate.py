@@ -32,6 +32,10 @@ N, K, SEED, DRAWS = 60, 10, 42, 1000
 PRE_DATE = "2016-01-01"    # positives need a key habitat inventoried before this date (temporal separation)
 LABEL_M = 250              # positive if such a key habitat lies within this distance of the polygon
 
+# Pre-registered replications of the large-N rubric-hint test: no agent, no LLM, scored once.
+# Same window as Gävleborg (22 Aug - 3 Oct 2026), frozen at sampling via the pinned "today".
+REPLICATIONS = {"17": {"name": "Värmland", "today": "2026-10-03"}}
+
 
 def _eval_path(lannr: str) -> Path:
     return config.OUT / f"eval_{lannr}.json"
@@ -192,6 +196,44 @@ def evaluate(ids: list[str], labs: dict, rankings: dict, ks: tuple) -> dict:
             "results": res}
 
 
+def replicate(lannr: str, stage: str) -> None:
+    """Rubric-hint ranking over ALL notifications in the frozen window; primary k = 10% of N, secondary k = 10.
+    Uses the unchanged scoring functions of commit 26ea587. The ranking is built before any label is fetched."""
+    cfg = REPLICATIONS[lannr]
+    ev = sample(lannr, date.fromisoformat(cfg["today"]))  # freezes window and population (agent sample unused)
+    all_ids = window_ids(ev)
+    print(f"replication {cfg['name']} ({lannr}): {len(all_ids)} regeneration notifications received "
+          f"{ev['window'][0]}..{ev['window'][1]} (exclusive end)", flush=True)
+    if stage == "profiles":
+        for i, b in enumerate(all_ids, 1):
+            tools._profile.__wrapped__(b)
+            if i % 50 == 0:
+                print(f"profiles {i}/{len(all_ids)}", flush=True)
+        print(f"profiles done: {len(all_ids)}")
+        return
+    path = config.OUT / f"replication_{lannr}.json"
+    if path.exists():
+        raise SystemExit(f"out/{path.name} exists: this replication is scored once.")
+    rankings = {"rubric_hint": hint_keyed(all_ids)}          # blind: no labels yet
+    labs = {b: label(b) for b in all_ids}                     # labels only now
+    k_primary = max(K, round(0.1 * len(all_ids)))
+    res = evaluate(all_ids, labs, rankings, (k_primary, K))
+    out = {"lannr": lannr, "county": cfg["name"], "window": ev["window"], "population": len(all_ids),
+           "primary_k": k_primary, "secondary_k": K, "draws": DRAWS, "seed": SEED, "result": res,
+           "leakage": leakage_check(), "provenance": provenance(), "labels": [labs[b] for b in all_ids]}
+    path.write_text(json.dumps(out, indent=1, ensure_ascii=False))
+    vpath = config.OUT / "validation.json"  # append a summary; the Gävleborg score itself is untouched
+    v = json.loads(vpath.read_text())
+    v.setdefault("replications", {})[lannr] = {k: out[k] for k in out if k != "labels"}
+    vpath.write_text(json.dumps(v, indent=1, ensure_ascii=False))
+    print(f"N={res['n_total']}, excluded {res['excluded_post2016_only']}, N_eval={res['n_eval']}, "
+          f"positives={res['positives']} (overlapping: {res['positives_overlapping_polygon']}), base rate={res['base_rate']}")
+    for rr in res["results"]["rubric_hint"]:
+        print(f"  rubric_hint precision@{rr['k']}={rr['precision_at_k']} ({rr['hits']} hits)  baseline mean="
+              f"{rr['baseline_mean']} p95={rr['baseline_p95']}  p={rr['p_value']} (share at/above {rr['p_share']})  "
+              f"lift={rr['lift']}  (tie group at cutoff: {rr['tie_group_at_cutoff']})")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--lannr", required=True)
@@ -199,7 +241,12 @@ def main() -> None:
     ap.add_argument("--hint-only", action="store_true", help="dev check: score the rubric-hint ranking only, no LLM")
     ap.add_argument("--today", default=date.today().isoformat())
     ap.add_argument("--rescore", action="store_true", help="write a new timestamped file; never overwrite the first score")
+    ap.add_argument("--replication", action="store_true", help="pre-registered large-N rubric-hint replication")
     a = ap.parse_args()
+    if a.replication:
+        if a.stage == "agent" or a.lannr not in REPLICATIONS:
+            ap.error("--replication runs only --stage profiles/score for a county listed in REPLICATIONS")
+        return replicate(a.lannr, a.stage)
     if a.hint_only and a.stage == "agent":
         ap.error("--stage agent cannot be combined with --hint-only")
 
