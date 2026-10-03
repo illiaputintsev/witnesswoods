@@ -875,7 +875,7 @@ function renderEvidence() {
     </div>`;
   };
   $("ev-body").innerHTML = `
-    <h1>Does it point to the right places?</h1>
+    <h1>Testing</h1>
     <p class="t-lead">Skogsstyrelsen has already mapped forests it knows are valuable (key habitats, <i>nyckelbiotoper</i>). We hid that map, let WitnessWoods rank every new felling notification using only open species data, and then checked the hidden map.</p>
     <ol class="t-steps">
       <li><b>Hide the answer.</b> The map of known valuable forests is never shown to the ranking or the agent.</li>
