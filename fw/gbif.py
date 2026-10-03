@@ -14,8 +14,8 @@ def record_url(key) -> str:
     return f"https://www.gbif.org/occurrence/{key}"
 
 
-def _base(wkt: str, since_year: int) -> dict:
-    return {"datasetKey": config.ARTPORTALEN_DATASET, "geometry": wkt, "year": f"{since_year},2026",
+def _base(wkt: str, since_year: int, until_year: int = 2026) -> dict:
+    return {"datasetKey": config.ARTPORTALEN_DATASET, "geometry": wkt, "year": f"{since_year},{until_year}",
             "hasCoordinate": "true", "hasGeospatialIssue": "false", "occurrenceStatus": "PRESENT"}
 
 
@@ -29,13 +29,13 @@ def search_url(wkt: str, since_year: int) -> str:
     return full_url(f"{config.GBIF_API}/occurrence/search", {**_base(wkt, since_year), "limit": 20})
 
 
-def fetch_records(geom_4326, since_year: int = 2016, max_records: int = MAX_RECORDS) -> dict:
+def fetch_records(geom_4326, since_year: int = 2016, max_records: int = MAX_RECORDS, until_year: int = 2026) -> dict:
     """All Artportalen records inside a lon/lat geometry (paged), slimmed to the fields we use."""
     wkt = geo.gbif_wkt(geom_4326)
     records, offset, total = [], 0, 0
     while offset < max_records:
         body = get_json(f"{config.GBIF_API}/occurrence/search",
-                        {**_base(wkt, since_year), "limit": PAGE, "offset": offset},
+                        {**_base(wkt, since_year, until_year), "limit": PAGE, "offset": offset},
                         slim=_slim, slim_tag="slim1")
         total = body["count"]
         records += body["results"]

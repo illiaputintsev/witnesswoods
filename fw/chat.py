@@ -12,6 +12,67 @@ from fw import agent, config, tools
 MAX_TOKENS = 6000
 WEB_SEARCH = {"type": "web_search_20260209", "name": "web_search", "max_uses": 8}
 ARTFAKTA = "https://artfakta.se/taxa/{}"
+AREA_TOOL = {
+    "name": "area_records",
+    "description": "Deeper search of the open species data around this site: Artportalen records (via GBIF) within a "
+                   "wider radius and/or from earlier years than the dossier uses. Returns record and species counts, "
+                   "red-listed species with category, nearest distance and latest year, and records by year. "
+                   "Follow-up context only: it never changes the site's priority.",
+    "input_schema": {"type": "object", "additionalProperties": False, "required": ["radius_m", "since_year"], "properties": {
+        "radius_m": {"type": "integer", "enum": [1000, 2000, 3000, 5000], "description": "Distance from the polygon edge."},
+        "since_year": {"type": "integer", "enum": [2000, 2010, 2016], "description": "Earliest record year."}}},
+}
+
+
+def area_records(beteckn: str, radius_m: int, since_year: int) -> dict:
+    """Exact counts from GBIF facets; red-listed species from records fetched in three time slices, so dense
+    areas do not lose their older records to the page cap."""
+    from collections import Counter
+    from shapely.geometry import Point
+    from fw import geo, gbif, redlist, skogs
+    from fw.cache import get_json
+    site = geo.from_geojson(skogs.get_notification(beteckn)["geometry"])
+    zone = geo.buffer_4326(site, int(radius_m) + 50)
+    wkt = geo.gbif_wkt(zone)
+    base = gbif._base(wkt, int(since_year))
+    fac = get_json(f"{config.GBIF_API}/occurrence/search", {**base, "limit": 0, "facet": ["year", "speciesKey"],
+                                                           "facetLimit": 3000})
+    by_year = {f["field"]: {c["name"]: c["count"] for c in f["counts"]} for f in fac.get("facets", [])}
+    site_3006 = geo.to_3006(site)
+    red, truncated = {}, False
+    slices = [(a, b) for a, b in ((2000, 2015), (2016, 2021), (2022, 2026)) if b >= since_year]
+    for a, b in slices:
+        got = gbif.fetch_records(zone, max(a, int(since_year)), 2400, until_year=b)
+        truncated |= got["truncated"]
+        for r in got["records"]:
+            if r.get("decimalLongitude") is None:
+                continue
+            d = site_3006.distance(geo.to_3006(Point(r["decimalLongitude"], r["decimalLatitude"])))
+            if d > radius_m:
+                continue
+            row, _ = redlist.match(r.get("taxonID"), r.get("species"))
+            if row is None or redlist.normalise_category(row["Kategori"]) not in ("CR", "EN", "VU", "NT"):
+                continue
+            sp = red.setdefault(row["Vetenskapligt_namn"], {
+                "swedish": row["Svenskt_namn"], "category": redlist.normalise_category(row["Kategori"]),
+                "group": row["Organismgrupp1"], "records_in_sample": 0, "nearest_m": None, "latest_year": 0,
+                "earliest_year": 9999, "artfakta": ARTFAKTA.format(int(row["TaxonId"]))})
+            sp["records_in_sample"] += 1
+            sp["nearest_m"] = round(d) if sp["nearest_m"] is None else min(sp["nearest_m"], round(d))
+            y = r.get("year") or 0
+            sp["latest_year"], sp["earliest_year"] = max(sp["latest_year"], y), min(sp["earliest_year"], y or 9999)
+    top = sorted(red.items(), key=lambda kv: ({"CR": 0, "EN": 1, "VU": 2, "NT": 3}[kv[1]["category"]], kv[1]["nearest_m"]))[:30]
+    return {"radius_m": radius_m, "since_year": since_year,
+            "records_total_exact": fac.get("count"), "distinct_species_exact": len(by_year.get("SPECIES_KEY", {})),
+            "records_by_year_exact": dict(sorted(by_year.get("YEAR", {}).items())),
+            "redlisted_species_in_sample": len(red), "sample_truncated": truncated,
+            "redlisted": [{"scientific": k, **v} for k, v in top],
+            "gbif_search": gbif.search_url(wkt, int(since_year)),
+            "note": "Totals and the year distribution are exact GBIF counts for the search area. The red-listed list comes "
+                    "from records fetched in three time slices (up to 2,400 each); if sample_truncated is true it is a "
+                    "minimum. Follow-up context only, not part of the dossier or its priority. Records before 2016 are "
+                    "outside the agent's evidence window. A record shows a species was recorded, not that it occupies the site."}
+
 
 SYSTEM = """You are Forest Witness, answering follow-up questions from a human reviewer about ONE notified felling site in Sweden. The full dossier and evidence for the site are in <site_context>.
 
@@ -22,6 +83,7 @@ How to answer:
 - Use web_search only for what species_facts does not cover (for example identification, survey season, substrate details), at most one search per species, eligible species first. Name the source for anything you take from the web.
 - Never talk about tool limits or apologise for them. If a fact is not available, say briefly what the reviewer can check (the species' Artfakta page).
 - Tables are fine (markdown).
+- When the reviewer asks for a deeper, wider or older search of the area, call area_records (radius up to 5000 m, years from 2000). Say clearly that this is follow-up context that does not change the priority, and that records before 2016 are outside the dossier's evidence window.
 - When the reviewer asks for a plan, give a practical field-visit plan tied to this site's records, distances and the window-closing date.
 - When a chart helps, add one fenced block exactly like:
 ```chart
@@ -97,7 +159,7 @@ def ask(beteckn: str, messages: list[dict]) -> dict:
                                                  "cache_control": {"type": "ephemeral"}}]
     convo = [{"role": m["role"], "content": str(m["content"])[:4000]} for m in messages[-12:]]
     t0, route = time.time(), config.FW_ROUTE
-    params = dict(model=config.FW_MODEL, max_tokens=MAX_TOKENS, system=system, tools=[WEB_SEARCH], messages=convo,
+    params = dict(model=config.FW_MODEL, max_tokens=MAX_TOKENS, system=system, tools=[WEB_SEARCH, AREA_TOOL], messages=convo,
                   output_config={"effort": "medium"})
     try:
         client = agent.make_client(route, f"ww-chat-{beteckn.replace(' ', '_')}")
@@ -105,10 +167,24 @@ def ask(beteckn: str, messages: list[dict]) -> dict:
     except anthropic.APIStatusError:
         route = "direct"  # e.g. a proxy that does not pass server tools through
         resp = agent.make_client("direct", "").messages.create(**params)
-    for _ in range(4):  # server tools may pause a long turn
-        if resp.stop_reason != "pause_turn":
+    history = list(convo)
+    for _ in range(6):  # area_records runs here; server tools (web search) may pause a long turn
+        if resp.stop_reason == "tool_use":
+            history.append({"role": "assistant", "content": resp.content})
+            results = []
+            for b in resp.content:
+                if b.type == "tool_use" and b.name == "area_records":
+                    try:
+                        out = area_records(beteckn, **dict(b.input))
+                        results.append({"type": "tool_result", "tool_use_id": b.id, "content": json.dumps(out, ensure_ascii=False)})
+                    except Exception as e:
+                        results.append({"type": "tool_result", "tool_use_id": b.id, "is_error": True, "content": f"{type(e).__name__}: {e}"})
+            history.append({"role": "user", "content": results})
+        elif resp.stop_reason == "pause_turn":
+            history.append({"role": "assistant", "content": resp.content})
+        else:
             break
-        params["messages"] = convo + [{"role": "assistant", "content": resp.content}]
+        params["messages"] = history
         resp = agent.make_client(route, f"ww-chat-{beteckn.replace(' ', '_')}").messages.create(**params)
     text = "".join(b.text for b in resp.content if b.type == "text").strip()
     sources = []
