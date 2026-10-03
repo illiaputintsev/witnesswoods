@@ -1,0 +1,266 @@
+{
+ "sites": [
+  "A 41029-2026",
+  "A 41028-2026",
+  "A 41015-2026",
+  "A 41007-2026",
+  "A 41006-2026",
+  "A 40996-2026",
+  "A 40979-2026",
+  "A 40976-2026",
+  "A 40975-2026",
+  "A 40971-2026"
+ ],
+ "model": "claude-sonnet-5-5",
+ "pairs": 2,
+ "note": "Each pair runs the same 10 notifications on both routes with identical model, prompts, tools and parameters; tool outputs come from the disk cache. Token counts are as reported by the API for each route. Agent runs are not deterministic: the number of model calls differs between runs, so per-call figures are shown too.",
+ "routes": {
+  "direct": {
+   "calls": 42,
+   "input_uncached": 124,
+   "cache_write": 97872,
+   "cache_read": 739607,
+   "input_total": 837603,
+   "output": 21424,
+   "tool_calls": 102,
+   "usd": 0.6071,
+   "input_per_call": 19943,
+   "usd_per_call": 0.01445,
+   "runs": [
+    {
+     "run_id": "20261003-160556-ab-direct",
+     "calls": 21,
+     "input_uncached": 62,
+     "cache_write": 55255,
+     "cache_read": 359182,
+     "input_total": 414499,
+     "output": 10090,
+     "usd": 0.311,
+     "latency_s": 77.3,
+     "first_ts": "2026-10-03T16:05:59",
+     "last_ts": "2026-10-03T16:07:13",
+     "tool_calls": 51,
+     "priorities": {
+      "A 41029-2026": "MEDIUM",
+      "A 41028-2026": "LOW",
+      "A 41015-2026": "UNDER_SURVEYED",
+      "A 41007-2026": "HIGH",
+      "A 41006-2026": "MEDIUM",
+      "A 40996-2026": "UNDER_SURVEYED",
+      "A 40979-2026": "MEDIUM",
+      "A 40976-2026": "LOW",
+      "A 40975-2026": "HIGH",
+      "A 40971-2026": "UNDER_SURVEYED"
+     }
+    },
+    {
+     "run_id": "20261003-160746-ab-direct",
+     "calls": 21,
+     "input_uncached": 62,
+     "cache_write": 42617,
+     "cache_read": 380425,
+     "input_total": 423104,
+     "output": 11334,
+     "usd": 0.2961,
+     "latency_s": 87.7,
+     "first_ts": "2026-10-03T16:07:48",
+     "last_ts": "2026-10-03T16:09:14",
+     "tool_calls": 51,
+     "priorities": {
+      "A 41029-2026": "MEDIUM",
+      "A 41028-2026": "LOW",
+      "A 41015-2026": "UNDER_SURVEYED",
+      "A 41007-2026": "HIGH",
+      "A 41006-2026": "MEDIUM",
+      "A 40996-2026": "UNDER_SURVEYED",
+      "A 40979-2026": "MEDIUM",
+      "A 40976-2026": "LOW",
+      "A 40975-2026": "HIGH",
+      "A 40971-2026": "UNDER_SURVEYED"
+     }
+    }
+   ]
+  },
+  "condense": {
+   "calls": 50,
+   "input_uncached": 12777,
+   "cache_write": 117567,
+   "cache_read": 664134,
+   "input_total": 794478,
+   "output": 23598,
+   "tool_calls": 112,
+   "usd": 0.6883,
+   "input_per_call": 15890,
+   "usd_per_call": 0.01377,
+   "runs": [
+    {
+     "run_id": "20261003-160314-ab-condense",
+     "calls": 26,
+     "input_uncached": 5720,
+     "cache_write": 66343,
+     "cache_read": 314732,
+     "input_total": 386795,
+     "output": 12363,
+     "usd": 0.3639,
+     "latency_s": 109.2,
+     "first_ts": "2026-10-03T16:03:18",
+     "last_ts": "2026-10-03T16:05:04",
+     "tool_calls": 57,
+     "priorities": {
+      "A 41029-2026": "MEDIUM",
+      "A 41028-2026": "LOW",
+      "A 41015-2026": "UNDER_SURVEYED",
+      "A 41007-2026": "HIGH",
+      "A 41006-2026": "MEDIUM",
+      "A 40996-2026": "UNDER_SURVEYED",
+      "A 40979-2026": "MEDIUM",
+      "A 40976-2026": "LOW",
+      "A 40975-2026": "HIGH",
+      "A 40971-2026": "UNDER_SURVEYED"
+     }
+    },
+    {
+     "run_id": "20261003-160746-ab-condense",
+     "calls": 24,
+     "input_uncached": 7057,
+     "cache_write": 51224,
+     "cache_read": 349402,
+     "input_total": 407683,
+     "output": 11235,
+     "usd": 0.3244,
+     "latency_s": 100.4,
+     "first_ts": "2026-10-03T16:07:49",
+     "last_ts": "2026-10-03T16:09:27",
+     "tool_calls": 55,
+     "priorities": {
+      "A 41029-2026": "MEDIUM",
+      "A 41028-2026": "LOW",
+      "A 41015-2026": "UNDER_SURVEYED",
+      "A 41007-2026": "HIGH",
+      "A 41006-2026": "MEDIUM",
+      "A 40996-2026": "UNDER_SURVEYED",
+      "A 40979-2026": "MEDIUM",
+      "A 40976-2026": "LOW",
+      "A 40975-2026": "HIGH",
+      "A 40971-2026": "UNDER_SURVEYED"
+     }
+    }
+   ]
+  }
+ },
+ "savings": {
+  "input_tokens_pct": 5.1,
+  "usd_pct": -13.4,
+  "input_per_call_pct": 20.3,
+  "usd_per_call_pct": 4.7
+ },
+ "agreement": {
+  "same_priority": 20,
+  "of": 20,
+  "per_site": {
+   "A 41029-2026": [
+    [
+     "MEDIUM",
+     "MEDIUM"
+    ],
+    [
+     "MEDIUM",
+     "MEDIUM"
+    ]
+   ],
+   "A 41028-2026": [
+    [
+     "LOW",
+     "LOW"
+    ],
+    [
+     "LOW",
+     "LOW"
+    ]
+   ],
+   "A 41015-2026": [
+    [
+     "UNDER_SURVEYED",
+     "UNDER_SURVEYED"
+    ],
+    [
+     "UNDER_SURVEYED",
+     "UNDER_SURVEYED"
+    ]
+   ],
+   "A 41007-2026": [
+    [
+     "HIGH",
+     "HIGH"
+    ],
+    [
+     "HIGH",
+     "HIGH"
+    ]
+   ],
+   "A 41006-2026": [
+    [
+     "MEDIUM",
+     "MEDIUM"
+    ],
+    [
+     "MEDIUM",
+     "MEDIUM"
+    ]
+   ],
+   "A 40996-2026": [
+    [
+     "UNDER_SURVEYED",
+     "UNDER_SURVEYED"
+    ],
+    [
+     "UNDER_SURVEYED",
+     "UNDER_SURVEYED"
+    ]
+   ],
+   "A 40979-2026": [
+    [
+     "MEDIUM",
+     "MEDIUM"
+    ],
+    [
+     "MEDIUM",
+     "MEDIUM"
+    ]
+   ],
+   "A 40976-2026": [
+    [
+     "LOW",
+     "LOW"
+    ],
+    [
+     "LOW",
+     "LOW"
+    ]
+   ],
+   "A 40975-2026": [
+    [
+     "HIGH",
+     "HIGH"
+    ],
+    [
+     "HIGH",
+     "HIGH"
+    ]
+   ],
+   "A 40971-2026": [
+    [
+     "UNDER_SURVEYED",
+     "UNDER_SURVEYED"
+    ],
+    [
+     "UNDER_SURVEYED",
+     "UNDER_SURVEYED"
+    ]
+   ]
+  },
+  "cited_evidence_jaccard_mean": 0.691,
+  "cited_ids_found_in_evidence_store": "90/90",
+  "summary": "Through Condense: 5% fewer input tokens and 13% higher cost in total (20% fewer input tokens and 5% lower cost per model call); same priorities on 20/20 site runs; all 90 cited evidence IDs retained in the store."
+ }
+}

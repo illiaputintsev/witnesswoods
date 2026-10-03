@@ -1,0 +1,149 @@
+{
+ "label": "key habitat inventoried before 2016-01-01 within 250 m of the polygon",
+ "draws": 1000,
+ "cards": [
+  {
+   "county": "Gävleborg",
+   "n_total": 494,
+   "excluded": 7,
+   "n_eval": 487,
+   "positives": 20,
+   "base_rate": 0.0411,
+   "primary": {
+    "k": 49,
+    "hits": 5,
+    "precision_at_k": 0.102,
+    "baseline_mean": 0.0421,
+    "baseline_p95": 0.0816,
+    "p_value": 0.04,
+    "lift": 2.425,
+    "histogram": {
+     "0.0": 105,
+     "0.02": 264,
+     "0.04": 296,
+     "0.06": 186,
+     "0.08": 110,
+     "0.1": 27,
+     "0.12": 11,
+     "0.14": 1
+    }
+   },
+   "secondary": [
+    {
+     "k": 10,
+     "hits": 1,
+     "precision_at_k": 0.1,
+     "baseline_mean": 0.0425,
+     "baseline_p95": 0.2,
+     "p_value": 0.3556,
+     "lift": 2.353
+    }
+   ],
+   "scored_with_commit": "7abca23",
+   "window": [
+    "2026-08-22",
+    "2026-10-04"
+   ],
+   "pre_registered": false,
+   "note": "Two cut-offs (k = 10 and 10% of N) were fixed before scoring, but neither was named primary in advance; treat p as suggestive."
+  },
+  {
+   "county": "Värmland",
+   "n_total": 469,
+   "excluded": 7,
+   "n_eval": 462,
+   "positives": 65,
+   "base_rate": 0.1407,
+   "primary": {
+    "k": 47,
+    "hits": 12,
+    "precision_at_k": 0.2553,
+    "baseline_mean": 0.1339,
+    "baseline_p95": 0.2128,
+    "p_value": 0.018,
+    "lift": 1.906,
+    "histogram": {
+     "0.02": 8,
+     "0.04": 27,
+     "0.06": 62,
+     "0.09": 122,
+     "0.11": 168,
+     "0.13": 172,
+     "0.15": 152,
+     "0.17": 120,
+     "0.19": 88,
+     "0.21": 43,
+     "0.23": 21,
+     "0.26": 14,
+     "0.28": 2,
+     "0.34": 1
+    }
+   },
+   "secondary": [
+    {
+     "k": 10,
+     "hits": 3,
+     "precision_at_k": 0.3,
+     "baseline_mean": 0.1419,
+     "baseline_p95": 0.3,
+     "p_value": 0.1668,
+     "lift": 2.114
+    }
+   ],
+   "scored_with_commit": "06366f1",
+   "window": [
+    "2026-08-22",
+    "2026-10-04"
+   ],
+   "pre_registered": true
+  }
+ ],
+ "protocol_commit": "7abca23",
+ "agent_sample": {
+  "county": "Gävleborg",
+  "n_sampled": 60,
+  "n_eval": 59,
+  "positive_biotopes": [
+   "Blandsumpskog (BLANSUMP)",
+   "Barrskog (BARRSKOG)",
+   "Alsumpskog (ALSUMP)",
+   "Barrnaturskog (BARRNATU)",
+   "Blandsumpskog (BLANSUMP)"
+  ],
+  "positives_swamp_forest": 3,
+  "positives": 5,
+  "agent": {
+   "k": 10,
+   "hits": 0,
+   "precision_at_k": 0.0,
+   "baseline_mean": 0.096,
+   "p_value": 1.0,
+   "lift": 0.0
+  },
+  "rubric_hint": {
+   "k": 10,
+   "hits": 0,
+   "precision_at_k": 0.0,
+   "baseline_mean": 0.096,
+   "p_value": 1.0,
+   "lift": 0.0
+  }
+ },
+ "leakage": {
+  "key_habitat_layer_used_outside_validate": [],
+  "label": "key habitat inventoried before 2016-01-01 within 250 m of the polygon",
+  "agent_tools": [
+   "get_notification",
+   "check_completed_felling",
+   "query_species",
+   "observation_effort",
+   "redlist_lookup",
+   "get_evidence",
+   "record_finding"
+  ],
+  "key_habitat_tool_registered": false,
+  "species_records_since_year": 2016,
+  "positive_requires_datinv_before": "2016-01-01",
+  "note": "Strong temporal separation, not perfect independence: pre-2016 inventories may still have influenced later recording near the same sites."
+ }
+}

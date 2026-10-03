@@ -1,0 +1,39 @@
+{
+ "week": {
+  "county": "Dalarna",
+  "received_from": "2026-09-28",
+  "received_to": "2026-10-03",
+  "n": 67,
+  "no_record_within_250m": 43,
+  "share_no_record_within_250m": 0.6418
+ },
+ "zero_record_share": [
+  {
+   "county": "Gävleborg",
+   "lannr": "21",
+   "window": [
+    "2026-08-22",
+    "2026-10-04"
+   ],
+   "n": 494,
+   "no_record_within_250m": 276,
+   "share_no_record_within_250m": 0.5587,
+   "no_record_inside": 450,
+   "share_no_record_inside": 0.9109
+  },
+  {
+   "county": "Värmland",
+   "lannr": "17",
+   "window": [
+    "2026-08-22",
+    "2026-10-04"
+   ],
+   "n": 469,
+   "no_record_within_250m": 260,
+   "share_no_record_within_250m": 0.5544,
+   "no_record_inside": 436,
+   "share_no_record_inside": 0.9296
+  }
+ ],
+ "headline": "43 of the 67 sites notified in Dalarna this week (64%) have no species record within 250 m since 2016."
+}

@@ -1,6 +1,6 @@
 # WitnessWoods
 
-*One dataset can lie. We ask all of them.*
+*One dataset can lie. We ask all of them.* · *Evidence before the saw.*
 
 Every week, new forests are notified for felling across Sweden. Regeneration felling of 0.5 ha or more normally may not start until six weeks after notification, and that window is the only time human ecologists can look at a site. Nobody can check every notification by hand.
 
@@ -10,19 +10,51 @@ WitnessWoods triages newly notified felling sites for human ecological review. I
 - contradictions between sources;
 - uncertainties;
 - what the evidence does not establish;
-- a next action for a human reviewer.
+- a next action for a human reviewer, before the six-week window closes.
 
-**What it does not do.** It does not measure biodiversity, does not judge whether felling is legal or right, and never says a site is safe to fell. Absence of records is not absence of species: a site that nobody has recorded is marked UNDER_SURVEYED, not LOW. A species record shows that the species was recorded there, not that it occupies the site today. A Red List category describes extinction risk, not legal protection.
+**What it does not do.** It does not measure biodiversity, does not judge whether felling is legal or right, and never says a site is safe to fell. Absence of records is not absence of species: a site nobody has recorded is marked UNDER_SURVEYED, not LOW. A species record shows that the species was recorded there, not that it occupies the site today. A Red List category describes extinction risk, not legal protection.
+
+![This week's Dalarna notifications on a Sentinel-2 basemap](docs/screens/landing.jpg)
+![A HIGH dossier: red-listed species near the site, the six-week window, cited evidence](docs/screens/dossier_high.jpg)
+
+## Results
+
+**The question:** without ever seeing key habitats (nyckelbiotoper), does the evidence ranking put sites near known key habitats at the top more often than an area-matched random selection?
+
+| Test | N | Base rate | k | Precision@k | Random baseline | p | Lift |
+|---|---|---|---|---|---|---|---|
+| **Värmland, pre-registered replication** (primary k = 10% of N) | 462 | 14.1% | 47 | 0.26 | 0.134 | **0.018** | **1.9×** |
+| Gävleborg, exploratory cut-off | 487 | 4.1% | 49 | 0.10 | 0.042 | 0.04 | 2.4× |
+| Gävleborg, agent on a 60-site sample | 59 | 8.5% | 10 | 0.00 | 0.096 | 1.0 | 0.0 |
+
+**Headline result.** In a county the project never looked at (Värmland), the deterministic evidence rubric's top 10% of new felling notifications were about twice as likely as area-matched random picks to lie within 250 m of a key habitat inventoried before 2016. The test was pre-registered in code (commit `06366f1`) before any Värmland label was fetched, and scored once.
+
+**Caveats.**
+- **Gävleborg:** two cut-offs were fixed before scoring (commit `7abca23`), but neither was named primary, so treat its p-value as suggestive.
+- **The agent itself:** on its 60-site held-out sample (only 5 positives), the agent did no better than the baseline. We report that as is.
+- **Proxy, not truth:** key habitats are an evaluation proxy, hidden from the agent and the rule. Species records are used only from 2016, and positives need a key habitat inventoried before 2016. That is strong temporal separation, not perfect independence.
+
+**How much is unrecorded.** 43 of the 67 sites notified in Dalarna in the week of 28 Sep to 3 Oct 2026 (64%) have no species record within 250 m since 2016. Over six weeks the share is 56% in Gävleborg and 55% in Värmland.
+
+**Condense A/B** (2 paired runs of the same 10 notifications, direct vs through Condense, same model, prompts and cached tool outputs):
+- Same priorities on 20 of 20 site runs, and all 90 cited evidence IDs are retained.
+- Per model call, Condense sent 20% fewer input tokens and cost 5% less.
+- The agent made more calls through Condense (50 against 42), so total input was only 5% lower and total cost was 13% higher.
+
+We report dollars, not just tokens, because lost cache hits can eat the savings. Full numbers are in `web/data/condense.json`.
+
+![Evidence test](docs/screens/evidence.jpg)
+![Condense A/B](docs/screens/condense.jpg)
 
 ## How it works
 
 - **Evidence per notification:**
   - the felling notification;
   - overlap with completed fellings (satellite change detection);
-  - Artportalen species records since 2016;
-  - observation effort compared with a county reference.
+  - Artportalen species records since 2016, sorted into distance rings (inside, 100, 250, 500 and 1000 m);
+  - observation effort, compared with a county reference, both near the site and within 1 km.
 
-  Species records are sorted into distance rings: inside the polygon, and within 100, 250, 500 and 1000 m. A record counts for a ring only if its coordinate uncertainty is no larger than the ring's radius, so records whose location was deliberately blurred, such as sensitive species, never count as near a site.
+  A record counts for a ring only if its coordinate uncertainty is no larger than the ring, so records whose location was deliberately blurred, such as sensitive species, never count as near a site.
 - **Swedish Red List 2025:** joined to the records by Dyntaxa taxon ID. A species is *eligible* when it is:
   - threatened (CR, EN or VU);
   - forest-associated;
@@ -30,54 +62,51 @@ WitnessWoods triages newly notified felling sites for human ecological review. I
   - site-bound (fungi, lichens, mosses, plants, wood-living insects).
 
   Birds and mammals only ever count as supporting evidence.
-- **Rubric:** [`prompts/rubric.md`](prompts/rubric.md) gives a deterministic `rubric_hint`. The agent may override it only with a reason that cites evidence.
-- **Agent:** a hand-written tool loop over the Anthropic Messages API (Claude Sonnet 5.5), with no agent framework. It has seven tools; `record_finding` rejects any dossier whose claims cite missing evidence IDs or break the honesty rules.
-- **Memory:** "compress the investigation, never the evidence". Every fact is stored losslessly in SQLite with an ID, and every network response is cached to disk.
-- **Validation:** the key-habitat (nyckelbiotop) layer is queried only in `fw/validate.py` and is never an agent tool.
+- **Rubric:** [`prompts/rubric.md`](prompts/rubric.md) gives a deterministic `rubric_hint`. The agent may override it only with a reason that cites evidence; LOW is impossible when recording effort is below the county median.
+- **Agent:** a hand-written tool loop over the Anthropic Messages API (Claude Sonnet 5.5), with no framework. It has eight tools. `landscape_context` is context only and never part of the rubric: it reports hectares felled within 1 km by year range, and red-listed records that lie inside an area felled after they were made. `record_finding` rejects any dossier that cites missing evidence IDs or breaks the honesty rules.
+- **Memory:** "compress the investigation, never the evidence". Every fact is stored losslessly in SQLite with an ID, and every network response, including map tiles, is cached to disk.
+- **Validation:** the key-habitat layer is queried only in `fw/validate.py` and is never an agent tool. The order is fixed: freeze the sample, run blind, then fetch labels and score once.
 
 ## Run it
 
+**Replay mode, no API keys needed.** This uses the committed demo snapshot in `web/data/`:
+
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp .env.example .env   # add ANTHROPIC_API_KEY (and Condense settings, or FW_ROUTE=direct)
-.venv/bin/python scripts/smoke.py                            # hit every data source once
-.venv/bin/python -m fw.inspect_cli "A 41007-2026"            # evidence profile, no LLM
-.venv/bin/python -m fw.agent --lannr 20 --n 10               # investigate the 10 newest Dalarna notifications
-.venv/bin/python scripts/m2_report.py                        # priorities, overrides, tool paths, cost
+.venv/bin/python server.py      # then open http://127.0.0.1:8000
 ```
 
-Dossiers are written to `out/dossiers/` (JSON and Markdown). The Swedish Red List is downloaded on first use.
+Keys: <kbd>Space</kbd> replays the week, <kbd>←</kbd>/<kbd>→</kbd> step through sites, <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> switch tabs, <kbd>F</kbd> toggles fullscreen. Map tiles need the internet the first time they are viewed, after which they are served from the disk cache. Without tiles the map falls back to a plain background with the county outline.
 
-## Results (held out and pre-registered)
+**Full pipeline** (needs `ANTHROPIC_API_KEY`; Condense is optional):
 
-**The question:** without ever seeing key habitats, does the ranking put sites near known key habitats at the top more often than an area-matched random selection?
+```bash
+cp .env.example .env                                         # add keys; FW_ROUTE=direct works without Condense
+.venv/bin/python scripts/smoke.py                            # hit every data source once
+.venv/bin/python -m fw.inspect_cli "A 41007-2026"            # evidence profile, no LLM
+.venv/bin/python -m fw.agent --lannr 20 --since 2026-09-28   # investigate a week of Dalarna notifications
+.venv/bin/python scripts/build_web_data.py                   # rebuild web/data from the dossiers
+.venv/bin/python -m fw.validate --lannr 17 --replication --stage score   # how the replication was scored
+.venv/bin/python scripts/ab_condense.py                      # one more Condense A/B pair
+```
 
-**Label.** A site counts as positive if a key habitat inventoried before 2016 lies within 250 m of the notified polygon. Notified polygons rarely overlap key habitats themselves (1.4% in the development county), because owners leave them out of the area they fell. Species records are used only from 2016 on. Sites whose only nearby key habitats were inventoried in 2016 or later are excluded.
+`scripts/ui_check.py` takes acceptance screenshots with Playwright, using the installed Chrome (`pip install playwright`).
 
-**Baseline.** 1,000 random selections with the same mix of site areas. Areas are matched because larger sites are more likely to have a key habitat nearby.
+## Related work
 
-**Protocol.** The protocol and the replication config were committed before the corresponding labels were fetched: commit `7abca23` for the protocol and `06366f1` for the Värmland replication. Each held-out county was scored once.
-
-| Test | N | Base rate | k | Precision@k | Random baseline | p | Lift |
-|---|---|---|---|---|---|---|---|
-| Gävleborg, **agent** on a 60-site sample | 59 | 8.5% | 10 | 0.00 | 0.096 | 1.0 | 0.0 |
-| Gävleborg, deterministic rubric, all notifications | 487 | 4.1% | 49 | 0.10 | 0.042 | 0.04 | 2.4 |
-| **Värmland replication** (pre-registered primary), rubric, all notifications | 462 | 14.1% | 47 | 0.26 | 0.134 | **0.018** | **1.9** |
-| Värmland, rubric (secondary) | 462 | 14.1% | 10 | 0.30 | 0.142 | 0.17 | 2.1 |
-
-What this shows, and what it does not:
-- In two counties we never tuned on, the deterministic rubric's top 10% of notifications were about twice as likely as area-matched random picks to lie near an old key habitat. The pre-registered replication passes at the 5% level.
-- The agent itself did not beat the baseline on its 60-site held-out sample (0 of 10, with only 5 positives in 59 sites). We report that as is.
-- Key habitats are an evaluation proxy, not ground truth.
-- This is strong temporal separation, not perfect independence.
-
-**How much is unrecorded.** Of newly notified regeneration-felling sites (22 Aug to 3 Oct 2026), 56% in Gävleborg and 55% in Värmland have no species record within 250 m since 2016. More than 90% have none inside the polygon.
+- **[Avverkningsvakten Östergötland](https://github.com/markussfranzen/avverkningsvakten-ostergotland)**: a daily open-data screening of felling notifications in Östergötland. It checks them against protected and red-listed species records, key habitats, modelled conservation value and the six-week deadline. It publishes a ranked list and dashboard, and drafts letters for a person to check and send. WitnessWoods additionally measures recording effort (UNDER_SURVEYED), uses Red List threat factors, writes evidence-cited dossiers and is validated against held-out key habitats.
+- **[avverkningskoll.se](https://www.avverkningskoll.se/)**: lists current felling notifications from Skogsstyrelsen's data on a map and in a table, with optional email alerts for chosen areas. It makes no ecological assessment.
+- **[Skogens karta](https://www.skogsstyrelsen.se/e-tjanster-och-kartor/karttjanster/skogens-karta/)** (Skogsstyrelsen, launching October 2026, successor to Skogens pärlor): the agency's open map, showing notifications and completed fellings alongside key habitats, nature values and other layers, for a person to inspect one area at a time. WitnessWoods investigates every new notification automatically and ranks where field time should go.
+- **[Metsävahti](https://github.com/EemeliSurakkaBrink/metsavahti)** (Finland): an open-source, self-hosted service. It emails users when a forest use notification appears inside an area they draw on a map, using the Finnish Forest Centre's open data. It alerts on notifications without assessing them.
 
 ## Data sources and licences
 
 - **Skogsstyrelsen** (Swedish Forest Agency): felling notifications, completed fellings and key habitats. CC0.
 - **Artportalen via GBIF**: dataset `38b4c89f-584c-41bb-bd8f-cd1def33e92f`. CC0.
 - **SLU Artdatabanken, Swedish Red List 2025** ([doi:10.5878/2x1z-jm10](https://doi.org/10.5878/2x1z-jm10)). CC0.
-- **Sentinel-2 cloudless by EOX IT Services GmbH** (contains modified Copernicus Sentinel data): map basemap only, non-commercial use.
+- **[Sentinel-2 cloudless](https://s2maps.eu) by EOX IT Services GmbH** (contains modified Copernicus Sentinel data 2023): map basemap only. CC BY-NC-SA 4.0, non-commercial use.
+- **OpenStreetMap contributors**: fallback basemap and county outline. ODbL.
+
+Locations of sensitive species are protected in public data. WitnessWoods never tries to recover them.
 
 Built with Claude Code; agent traffic routed through Condense.
