@@ -37,7 +37,9 @@ a { color: var(--reindeer-moss); }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--reindeer-moss); min-width: 210px; }
 .logo { width: 44px; height: 30px; }
 .wordmark { font-weight: 700; font-size: 19px; letter-spacing: 0.2px; color: var(--snow); display: flex; align-items: center; }
-.wordmark .tri { color: var(--reindeer-moss); font-size: 19px; margin-right: 8px; transform: translateY(-1px); }
+.wordmark { line-height: 1; }
+.wordmark { align-items: baseline; }
+.wordmark .tri { color: var(--reindeer-moss); width: 0.8em; height: 0.72em; margin-right: 8px; flex: none; }
 .tagline { font-size: 12px; color: var(--moss-grey); margin-top: -2px; }
 .counters { flex: 1; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; font-size: 14px; color: var(--moss-grey); min-width: 0; }
 .counters b { color: var(--snow); font-weight: 600; font-size: 17px; }
