@@ -35,16 +35,18 @@ def get_json(url: str, params: dict | None = None, refresh: bool = False,
     p = _path(u + (f"#{slim_tag}" if slim_tag else ""))
     if p.exists() and not refresh:
         return json.loads(p.read_text())["body"]
-    for attempt in range(3):
+    for attempt in range(7):
         try:
             r = _client.get(u)
             r.raise_for_status()
             body = r.json()
             break
-        except (httpx.TransportError, httpx.HTTPStatusError):
-            if attempt == 2:
+        except (httpx.TransportError, httpx.HTTPStatusError) as e:
+            if attempt == 6:
                 raise
-            time.sleep(2 ** attempt)
+            # Rate limits (429) and server errors: honour Retry-After, else back off 2, 4, 8 ... 60 s
+            ra = getattr(getattr(e, "response", None), "headers", {}).get("retry-after")
+            time.sleep(float(ra) if ra and ra.isdigit() else min(60, 2 ** (attempt + 1)))
     # ArcGIS reports errors with HTTP 200 and an "error" key; do not cache those
     if isinstance(body, dict) and "error" in body:
         raise RuntimeError(f"API error for {u}: {body['error']}")

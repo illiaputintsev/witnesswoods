@@ -17,7 +17,7 @@ DB = OUT / "evidence.db"
 @lru_cache(maxsize=1)
 def _conn():
     OUT.mkdir(parents=True, exist_ok=True)
-    c = sqlite3.connect(DB, check_same_thread=False)
+    c = sqlite3.connect(DB, check_same_thread=False, timeout=60, isolation_level=None)
     c.execute("""CREATE TABLE IF NOT EXISTS evidence(
         id TEXT PRIMARY KEY, notification TEXT, kind TEXT, payload TEXT,
         source_url TEXT, created_at TEXT, digest TEXT UNIQUE)""")
@@ -31,12 +31,22 @@ def add(notification: str, kind: str, payload: dict, source_url: str = "") -> st
     row = c.execute("SELECT id FROM evidence WHERE digest=?", (digest,)).fetchone()
     if row:
         return row[0]
-    n = c.execute("SELECT COUNT(*) FROM evidence").fetchone()[0]
-    eid = f"E-{n + 1:04d}"
-    c.execute("INSERT INTO evidence VALUES (?,?,?,?,?,?,?)",
-              (eid, notification, kind, body, source_url, time.strftime("%Y-%m-%dT%H:%M:%S"), digest))
-    c.commit()
-    return eid
+    # Lock the database while minting the next ID, so parallel processes never collide
+    c.execute("BEGIN IMMEDIATE")
+    try:
+        row = c.execute("SELECT id FROM evidence WHERE digest=?", (digest,)).fetchone()
+        if row:
+            c.execute("COMMIT")
+            return row[0]
+        n = c.execute("SELECT COUNT(*) FROM evidence").fetchone()[0]
+        eid = f"E-{n + 1:04d}"
+        c.execute("INSERT INTO evidence VALUES (?,?,?,?,?,?,?)",
+                  (eid, notification, kind, body, source_url, time.strftime("%Y-%m-%dT%H:%M:%S"), digest))
+        c.execute("COMMIT")
+        return eid
+    except Exception:
+        c.execute("ROLLBACK")
+        raise
 
 
 def get(ids: list[str]) -> list[dict]:

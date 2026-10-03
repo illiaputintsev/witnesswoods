@@ -1,0 +1,474 @@
+{
+ "lannr": "21",
+ "definition": "polygon+1000m_since2016_unc1000_near250_v4",
+ "window": [
+  "2026-06-01",
+  "2026-10-01"
+ ],
+ "population": 544,
+ "sample": 50,
+ "seed": 42,
+ "radius_m": 1000,
+ "since_year": 2016,
+ "median_records": 27.0,
+ "p25_records": 8.5,
+ "p75_records": 76.0,
+ "median_species": 18.5,
+ "median_days": 6.0,
+ "zero_record_sites": 3,
+ "median_within_250m": 0.0,
+ "median_inside": 0.0,
+ "zero_within_250m_sites": 28,
+ "sites": [
+  {
+   "beteckn": "A 35098-2026",
+   "records": 124,
+   "species": 76,
+   "days": 16,
+   "inside": 1,
+   "within_250m": 1,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 27992-2026",
+   "records": 7,
+   "species": 7,
+   "days": 2,
+   "inside": 0,
+   "within_250m": 2,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 37024-2026",
+   "records": 167,
+   "species": 92,
+   "days": 49,
+   "inside": 0,
+   "within_250m": 7,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 36702-2026",
+   "records": 9,
+   "species": 8,
+   "days": 3,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 36583-2026",
+   "records": 1,
+   "species": 1,
+   "days": 1,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 35420-2026",
+   "records": 7,
+   "species": 5,
+   "days": 2,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 34980-2026",
+   "records": 100,
+   "species": 66,
+   "days": 37,
+   "inside": 0,
+   "within_250m": 6,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 34853-2026",
+   "records": 7,
+   "species": 5,
+   "days": 2,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 38602-2026",
+   "records": 20,
+   "species": 20,
+   "days": 2,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 28871-2026",
+   "records": 0,
+   "species": 0,
+   "days": 0,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 28681-2026",
+   "records": 9,
+   "species": 9,
+   "days": 2,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 34999-2026",
+   "records": 11,
+   "species": 10,
+   "days": 2,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 36487-2026",
+   "records": 23,
+   "species": 18,
+   "days": 6,
+   "inside": 0,
+   "within_250m": 1,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 36529-2026",
+   "records": 65,
+   "species": 52,
+   "days": 7,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 40190-2026",
+   "records": 32,
+   "species": 27,
+   "days": 6,
+   "inside": 0,
+   "within_250m": 1,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 28518-2026",
+   "records": 13,
+   "species": 9,
+   "days": 4,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 36090-2026",
+   "records": 73,
+   "species": 51,
+   "days": 10,
+   "inside": 0,
+   "within_250m": 14,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 38551-2026",
+   "records": 306,
+   "species": 95,
+   "days": 57,
+   "inside": 0,
+   "within_250m": 5,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 36516-2026",
+   "records": 126,
+   "species": 109,
+   "days": 12,
+   "inside": 0,
+   "within_250m": 32,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 39314-2026",
+   "records": 48,
+   "species": 18,
+   "days": 4,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 37022-2026",
+   "records": 85,
+   "species": 26,
+   "days": 2,
+   "inside": 9,
+   "within_250m": 85,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 25641-2026",
+   "records": 57,
+   "species": 30,
+   "days": 18,
+   "inside": 0,
+   "within_250m": 8,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 35482-2026",
+   "records": 65,
+   "species": 46,
+   "days": 15,
+   "inside": 1,
+   "within_250m": 4,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 37937-2026",
+   "records": 37,
+   "species": 19,
+   "days": 27,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 35434-2026",
+   "records": 6,
+   "species": 4,
+   "days": 2,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 36562-2026",
+   "records": 0,
+   "species": 0,
+   "days": 0,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 37926-2026",
+   "records": 72,
+   "species": 53,
+   "days": 12,
+   "inside": 0,
+   "within_250m": 22,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 34989-2026",
+   "records": 3,
+   "species": 1,
+   "days": 3,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 38371-2026",
+   "records": 4,
+   "species": 4,
+   "days": 1,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 34998-2026",
+   "records": 16,
+   "species": 15,
+   "days": 2,
+   "inside": 0,
+   "within_250m": 13,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 38109-2026",
+   "records": 208,
+   "species": 179,
+   "days": 27,
+   "inside": 0,
+   "within_250m": 2,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 37977-2026",
+   "records": 71,
+   "species": 48,
+   "days": 7,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 37044-2026",
+   "records": 0,
+   "species": 0,
+   "days": 0,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 30647-2026",
+   "records": 2,
+   "species": 1,
+   "days": 2,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 39570-2026",
+   "records": 105,
+   "species": 63,
+   "days": 13,
+   "inside": 0,
+   "within_250m": 11,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 35182-2026",
+   "records": 10,
+   "species": 10,
+   "days": 4,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 38355-2026",
+   "records": 38,
+   "species": 11,
+   "days": 5,
+   "inside": 1,
+   "within_250m": 1,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 34733-2026",
+   "records": 320,
+   "species": 97,
+   "days": 64,
+   "inside": 0,
+   "within_250m": 237,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 37220-2026",
+   "records": 212,
+   "species": 40,
+   "days": 13,
+   "inside": 0,
+   "within_250m": 11,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 38173-2026",
+   "records": 19,
+   "species": 8,
+   "days": 6,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 36061-2026",
+   "records": 18,
+   "species": 15,
+   "days": 8,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 34141-2026",
+   "records": 24,
+   "species": 22,
+   "days": 3,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 31443-2026",
+   "records": 9,
+   "species": 8,
+   "days": 7,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 36575-2026",
+   "records": 20,
+   "species": 19,
+   "days": 3,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 37182-2026",
+   "records": 30,
+   "species": 11,
+   "days": 11,
+   "inside": 0,
+   "within_250m": 9,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 34735-2026",
+   "records": 40,
+   "species": 34,
+   "days": 7,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 34950-2026",
+   "records": 4,
+   "species": 3,
+   "days": 2,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 39437-2026",
+   "records": 377,
+   "species": 80,
+   "days": 18,
+   "inside": 0,
+   "within_250m": 6,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 38249-2026",
+   "records": 52,
+   "species": 50,
+   "days": 10,
+   "inside": 0,
+   "within_250m": 4,
+   "truncated": false
+  },
+  {
+   "beteckn": "A 35513-2026",
+   "records": 223,
+   "species": 119,
+   "days": 47,
+   "inside": 0,
+   "within_250m": 0,
+   "truncated": false
+  }
+ ]
+}
