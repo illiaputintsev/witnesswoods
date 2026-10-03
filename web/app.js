@@ -197,7 +197,14 @@ function renderHeadline() {
   const wins = [...new Set(st.zero_record_share.map((z) => z.window.join()))];
   const win = st.zero_record_share[0].window;
   const when = wins.length === 1 ? `received ${fmtDate(win[0], false)}–${fmtDate(addDays(win[1], -1))}` : "in each county's six-week window";
-  $("headline").innerHTML = `${esc(st.headline).replace(/(\d) m\b/g, "$1&nbsp;m")}<span class="sub">${esc(sub)} of notified regeneration-felling sites, ${when}</span>`;
+  $("headline").innerHTML = `<button class="hl-close" id="hl-close" title="Hide" aria-label="Hide this message">×</button>${esc(st.headline).replace(/(\d) m\b/g, "$1&nbsp;m")}<span class="sub">${esc(sub)} of notified regeneration-felling sites, ${when}</span>`;
+  let hidden = false;
+  try { hidden = sessionStorage.getItem("ww-headline-hidden") === "1"; } catch { /* storage unavailable */ }
+  $("headline").hidden = hidden;
+  $("hl-close").onclick = () => {
+    $("headline").hidden = true;
+    try { sessionStorage.setItem("ww-headline-hidden", "1"); } catch { /* storage unavailable */ }
+  };
 }
 const addDays = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 
