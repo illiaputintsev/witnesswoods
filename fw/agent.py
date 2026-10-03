@@ -8,6 +8,7 @@ tools and parameters are identical, so the two routes can be compared fairly.
 """
 import argparse
 import json
+from datetime import date, timedelta
 import os
 import time
 import uuid
@@ -259,8 +260,19 @@ def main() -> None:
     ap.add_argument("--n", type=int, default=10)
     ap.add_argument("--route", default=config.FW_ROUTE, choices=("condense", "direct"))
     ap.add_argument("--label", default="")
+    ap.add_argument("--since", help="all regeneration notifications received from this date (YYYY-MM-DD) to today")
+    ap.add_argument("--skip-existing", action="store_true", help="reuse notifications that already have a dossier")
     a = ap.parse_args()
-    ids = [b.replace("_", " ") for b in a.beteckn] or [n["beteckn"] for n in skogs.latest_notifications(a.lannr, a.n)]
+    if a.since:
+        end = (date.today() + timedelta(days=1)).isoformat()
+        ids = [n["beteckn"] for n in sorted(skogs.notifications_between(a.lannr, a.since, end),
+                                            key=lambda n: n["inkomdatum"], reverse=True)]
+    else:
+        ids = [b.replace("_", " ") for b in a.beteckn] or [n["beteckn"] for n in skogs.latest_notifications(a.lannr, a.n)]
+    if a.skip_existing:
+        done = {b for b in ids if (tools.DOSSIERS / f"{b.replace(' ', '_')}.json").exists()}
+        print(f"reusing {len(done)} existing dossiers")
+        ids = [b for b in ids if b not in done]
     for b in ids:  # warm the data cache and evidence store before spending tokens
         tools._profile(b)
     run = Run(a.route, config.FW_MODEL, config.FW_BUDGET_USD, a.label)
